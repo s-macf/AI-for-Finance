@@ -4,26 +4,13 @@ output: pdf_document
 date: "2025-04-05"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+# Submission Criteria and Indicative Marking Scheme
 
-## R Markdown
+You write also need to submit a short report (10 pages maximum) in markdown format covering the following points and including the relevant code and output:
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+    Background to the problem - a short review of the approach you are going to employ and a brief overview of related work in the area drawn from either published papers or blog postings (4 marks)
+    An overview of the of data you chose to work with (as usual, summary plots would be welcome). Working with one data set is fine but if you want to extend that to consider several assets then that is okay too.  (2 marks)
+    Details of your trading strategy and any specific decisions about the representation, fitness function, model configuration etc. along with details about implementation, any key parameters  etc... (9 marks)
+    Presentation of, and comments on, the performance achieved: Calculation of profit, and fitness values achieved on training data. (3 marks)
+    The performance of, and comments on, the model and backtesting strategy. How does this perform over unseen data (and why) and what level of profit would it yield? (4 marks)
+    Comparison against other approaches. The choice of what you compare with is yours. At least try a random solution or the performance of the mean value (if appropriate) and look at the performance obtained (3)
