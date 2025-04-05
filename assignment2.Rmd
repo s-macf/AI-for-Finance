@@ -14,3 +14,5 @@ You write also need to submit a short report (10 pages maximum) in markdown form
     Presentation of, and comments on, the performance achieved: Calculation of profit, and fitness values achieved on training data. (3 marks)
     The performance of, and comments on, the model and backtesting strategy. How does this perform over unseen data (and why) and what level of profit would it yield? (4 marks)
     Comparison against other approaches. The choice of what you compare with is yours. At least try a random solution or the performance of the mean value (if appropriate) and look at the performance obtained (3)
+
+test
