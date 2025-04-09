@@ -295,9 +295,9 @@ for (lr in learningrate_vals) {
 }
 
 # Identify the best parameter set (lowest MSE)
-best_params <- results[which.min(results$mse), ]
+best_params_GS <- results[which.min(results$mse), ]
 cat("Best Hyperparameters:\n")
-print(best_params)
+print(best_params_GS)
 ```
 
 ## Genetic Algorithm
@@ -332,9 +332,9 @@ ga_result <- ga(
   run = 20  
 )
 
-best_params <- ga_result@solution
+best_params_GA <- ga_result@solution
 cat("Best Hyperparameters:\n")
-print(best_params)
+print(best_params_GA)
 ```
 
 # LSTM
