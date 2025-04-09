@@ -88,6 +88,8 @@ best_asset
 best_asset_data <- getSymbols(best_asset, from = startDate, to = endDate, auto.assign = FALSE)
 ```
 
+## Data Preprocessing
+
 ```{R}
 rsi = TTR::RSI(Cl(best_asset_data), n = 14)
 ema_short = TTR::EMA(Cl(best_asset_data), n = 12)
@@ -102,7 +104,7 @@ best_asset_data$MACD = macd
 best_asset_data$Volume_MA = volume_ma
 
 best_asset_data = na.omit(best_asset_data)
-best_asset_data
+#best_asset_data
 ```
 
 ```{R}
@@ -112,7 +114,7 @@ min_max_normalize <- function(x) {
 }
 
 data_scaled <- as.data.frame(lapply(data, min_max_normalize))
-data_scaled
+#data_scaled
 ```
 
 ```{R}
@@ -165,8 +167,6 @@ y_test <- split_data$y_test
 str(features)
 ```
 
-# Optimisation Stuff
-
 ```{R}
 # For hyperparameter tuning, we split part of x_train/y_train to act as a validation set
 # For example, we use 80% for training and 20% for validation
@@ -201,6 +201,8 @@ y_train_tune <- split_data$y_train_tune
 x_val <- split_data$x_val
 y_val <- split_data$y_val
 ```
+
+# Optimisation Stuff
 
 ```{R}
 # Define a tuning function that trains the LSTM and returns the mean squared error on the validation set
