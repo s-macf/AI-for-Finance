@@ -79,7 +79,7 @@ $$ S_a = \frac{E[R_a - R_b]}{\sigma_a}$$
 
 $$Where: \newline S_a = \text{Sharpe Ratio }  \newline E = \text{Expected Return } $$
 
-$$ \newline R_a = \text{Asset Return } \newline R_b = \text{Risk Free Rate } \newline \sigma_a = \text{Asset Risk}$$
+$$R_a = \text{Asset Return } \newline R_b = \text{Risk Free Rate } \newline \sigma_a = \text{Asset Risk}$$
 
 ```{R}
 rf_rate <- as.numeric(last(getSymbols("DGS3MO", src = "FRED", auto.assign = FALSE)))/100 /252
@@ -334,17 +334,30 @@ print(best_params)
 # LSTM
 
 ```{R echo=TRUE, message=FALSE}
-model <- trainr(
-  Y = y_train,
-  X = x_train,
-  learningrate = 0.001,
-  hidden_dim = 32,
-  num_layers = 1,
-  numepochs = 200,
-  network_type = "lstm",
-  seq_to_seq_unsync = T,
-  bactch_size = 32
-)
+train_lstm <- function(params){
+  model <- trainr(
+    Y = y_train,
+    X = x_train,
+    learningrate = as.numeric(params[1]),
+    hidden_dim = as.numeric(round(params[2])),
+    num_layers = as.numeric(round(params[3])),
+    numepochs = as.numeric(round(params[4])),
+    network_type = "lstm",
+    seq_to_seq_unsync = T,
+    bactch_size = as.numeric(round(params[5]))
+  )
+  return(model)
+}
+```
+
+```{R}
+test <- "5.5"
+as.numeric(test)
+```
+
+```{R echo=TRUE, message=FALSE}
+lstm_GS <- train_lstm(best_params_GS)
+lstm_GA <- train_lstm(best_params_GA)
 ```
 
 ```{R include=FALSE}
@@ -357,12 +370,27 @@ draw_graph <- function(predictions, actual, msg, legend_pos = "bottomright") {
 }
 ```
 
-```{R fig.align="center", out.width="70%", echo=FALSE}
-predictions <- predictr(model, x_train)
-draw_graph(predictions, y_train, "LSTM Predictions vs Actual (Train Data)")
+```{R include=FALSE}
+draw_two_graph <- function(predictions1, actual1, predictions2, actual2, msg1, msg2, overall_title) {
+  par(mfrow = c(1, 2), oma = c(0, 0, 2, 0))
+  
+  # First graph
+  draw_graph(predictions1, actual1, msg1)
+  
+  # Second graph
+  draw_graph(predictions2, actual2, msg2)
+  mtext(overall_title, outer = TRUE, cex = 1.5)
+}
 ```
 
-```{R fig.align="center", out.width="70%", echo=FALSE}
-predictions <- predictr(model, x_test)
-draw_graph(predictions, y_test, "LSTM Predictions vs Actual (Test Data)")
+```{R fig.width=12, fig.height=4, echo=FALSE}
+predictions1 <- predictr(lstm_GS, x_train)
+predictions2 <- predictr(lstm_GS, x_test)
+draw_two_graph(predictions1, y_train, predictions2, y_test, "Train Data", "Test Data", "Grid Search Optimised Paramaters")
+```
+
+```{R fig.width=12, fig.height=4, echo=FALSE}
+predictions1 <- predictr(lstm_GA, x_train)
+predictions2 <- predictr(lstm_GA, x_test)
+draw_two_graph(predictions1, y_train, predictions2, y_test, "Train Data", "Test Data", "Genetic Algorithm Optimised Paramaters")
 ```
