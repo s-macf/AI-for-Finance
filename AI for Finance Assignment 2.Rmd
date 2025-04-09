@@ -20,7 +20,7 @@ library(TTR)
 set.seed(09042025)
 ```
 
-# Problem Background
+# Project Background
 
 
 
@@ -78,9 +78,7 @@ calc_sharpe_ratio <- function(returns, rf_rate) {
 The performance of all 500 assets is evaluated and compared to one another based on their Sharpe ratios. The Sharpe ratio serves as a valuable tool for measuring investment prospects for a specific asset as it enables the comparison of the expected return for the level of risk being taken (risk-adjusted return). In this case, a risk-free rate is dynamically retrieved and used within the Sharpe ratio calculation for each asset.
 
 $$ S_a = \frac{E[R_a - R_b]}{\sigma_a}$$
-
 $$Where: \newline S_a = \text{Sharpe Ratio }  \newline E = \text{Expected Return } $$
-
 $$R_a = \text{Asset Return } \newline R_b = \text{Risk Free Rate } \newline \sigma_a = \text{Asset Risk}$$
 
 ```{R}
@@ -96,11 +94,11 @@ for (col in colnames(df)) {
 }
 ```
 
-Once all assets have been compared, the best-performing asset is selected to be used to make next-day predictions in alignment with a comprehensive trading rule. All relevant data is then retrieved, this includes opening, high, low and closing prices.
-
-```{R}
+```{R include=FALSE}
 best_asset
 ```
+
+Once all assets have been compared, the best-performing asset is selected to be used to make next-day predictions in alignment with a comprehensive trading rule. All relevant data is then retrieved, this includes opening, high, low and closing prices.
 
 ```{R}
 best_asset_data <- getSymbols(best_asset, from = startDate, to = endDate, auto.assign = FALSE)
@@ -120,12 +118,12 @@ volume_ma = TTR::SMA(Vo(best_asset_data), n = 20)
 best_asset_data$RSI = rsi
 best_asset_data$MACD = macd
 best_asset_data$Volume_MA = volume_ma
-
 best_asset_data = na.omit(best_asset_data)
-#best_asset_data
 ```
 
-
+```{R include=FALSE}
+#best_asset_data
+```
 
 ```{R}
 data <- data.frame(best_asset_data[,1], best_asset_data[,2], best_asset_data[,3], best_asset_data[,4], best_asset_data[,5], best_asset_data[,6], best_asset_data[,7], best_asset_data[,8], best_asset_data[,9])
@@ -134,6 +132,9 @@ min_max_normalize <- function(x) {
 }
 
 data_scaled <- as.data.frame(lapply(data, min_max_normalize))
+```
+
+```{R include=FALSE}
 #data_scaled
 ```
 
@@ -224,6 +225,8 @@ y_val <- split_data$y_val
 
 # Optimising LSTM Parameters
 
+The LSTM parameters are optimised using two techniques: grid search and genetic algorithms. This was done to compare the results from utilising traditional versus evolutionary approaches and conclude the pros and cons of each. Furthermore, the optimised parameters identified from this process are used by the LSTM to make predictions in conjunction with the proposed trading rule.
+
 ```{R echo=TRUE, message=FALSE}
 # Define a tuning function that trains the LSTM and returns the mean squared error on the validation set
 tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_size) {
@@ -246,6 +249,8 @@ tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_siz
 ```
 
 ## Grid Search
+
+Grid search is a traditional approach to identifying optimal hyperparameter values for machine learning models. In this approach, the key hyperparameters to be tested are listed inside a vector, which the algorithm then systematically iterates over each combination and records the result. In this case, the mean squared error (MSE) is used on validation data to determine the current performance.
 
 ```{R echo=TRUE, message=FALSE}
 # Set up grid search parameters (you can adjust or expand the grid as needed)
@@ -305,7 +310,7 @@ print(best_params_GS)
 
 ## Genetic Algorithm
 
-
+A genetic algorithm is an evolutionary process that mimics natural selection and genetics. This algorithm has been used to identify optimal hyperparameters within specified ranges (lower and upper). This implementation has a maximum of 100 iterations and will stop executing if the fitness does not improve after 20 iterations. The fitness is determined using the fitness function which evaluates performance against the MSE value.
 
 ```{R echo=TRUE, message=FALSE}
 fitness_function <- function(params) {
@@ -342,6 +347,10 @@ best_params_GA <- ga_result@solution
 cat("Best Hyperparameters:\n")
 print(best_params_GA)
 ```
+
+### Optimisation Comparisons
+
+Through experimenting with both of the above approaches key benefits and downfalls of each have been identified. First, Grid search is strictly limited to searching the specified hyperparameters whereas the GA solution can navigate the search space more effectively only being restricted to lower and upper bounds. Furthermore, both algorithms are computationally expensive, although, genetic algorithms have an edge as they can effectively terminate execution if the performance has not improved over a specified number of iterations, whereas grid search must evaluate all combinations. Finally, this difference between the two approaches is what sets them apart as a GA can get stuck in a local maximum and never converge to the optimal solution, on the other hand, grid search will evaluate all provided combinations guaranteeing the most optimal from the provided is found.
 
 # LSTM
 
