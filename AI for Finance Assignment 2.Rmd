@@ -60,7 +60,7 @@ load_daily_returns <- function(asset_symbols, startDate, endDate) {
 
 ```{R}
 asset_symbols <- assets$symbol
-startDate <- "2024-01-01"; endDate <- "2024-12-31"
+startDate <- "2024-08-01"; endDate <- "2024-12-31"
 df <- load_daily_returns(asset_symbols, startDate, endDate)
 ```
 
@@ -245,11 +245,11 @@ tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_siz
 
 ```{R echo=TRUE, message=FALSE}
 # Set up grid search parameters (you can adjust or expand the grid as needed)
-learningrate_vals <- c(0.001, 0.01)
-hidden_dim_vals   <- c(16, 32)
-num_layers_vals   <- c(1, 2)
-numepochs_vals    <- c(100, 200)
-batch_size_vals   <- c(16, 32)
+learningrate_vals <- c(0.001, 0.005, 0.01)
+hidden_dim_vals <- c(8, 16, 32, 64, 128)
+num_layers_vals <- c(1, 2, 3)
+numepochs_vals <- c(50, 100, 150, 200)
+batch_size_vals <- c(8, 16, 32, 64)
 
 # Initialize a data frame to store results
 results <- data.frame(
@@ -319,8 +319,8 @@ fitness_function <- function(params) {
 ga_result <- ga(
   type = "real-valued",
   fitness = fitness_function,
-  lower = c(0.0001, 1, 1, 50, 1),
-  upper = c(0.01, 64, 5, 200, 64),  
+  lower = c(0.0001, 8, 1, 50, 8),
+  upper = c(0.01, 128, 3, 200, 64),  
   popSize = 20, 
   maxiter = 100,  
   run = 20  
