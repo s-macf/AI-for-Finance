@@ -348,9 +348,10 @@ train_lstm <- function(params){
     hidden_dim = as.numeric(round(params[2])),
     num_layers = as.numeric(round(params[3])),
     numepochs = as.numeric(round(params[4])),
-    network_type = "lstm",
-    seq_to_seq_unsync = T,
     bactch_size = as.numeric(round(params[5]))
+    network_type = "lstm",
+    activation = "tanh",
+    seq_to_seq_unsync = T,
   )
   return(model)
 }
