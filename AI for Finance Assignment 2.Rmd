@@ -232,7 +232,7 @@ tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_siz
 learningrate_vals <- c(0.001, 0.01)
 hidden_dim_vals   <- c(16, 32)
 num_layers_vals   <- c(1, 2)
-numepochs_vals    <- c(1, 2)
+numepochs_vals    <- c(100, 200)
 batch_size_vals   <- c(16, 32)
 
 # Initialize a data frame to store results
@@ -303,8 +303,8 @@ fitness_function <- function(params) {
 ga_result <- ga(
   type = "real-valued",
   fitness = fitness_function,
-  lower = c(0.001, 1, 1, 1, 1),
-  upper = c(0.01, 64, 5, 1, 64),  
+  lower = c(0.0001, 1, 1, 50, 1),
+  upper = c(0.01, 64, 5, 200, 64),  
   popSize = 20, 
   maxiter = 100,  
   run = 20  
@@ -324,7 +324,7 @@ model <- trainr(
   learningrate = 0.001,
   hidden_dim = 32,
   num_layers = 1,
-  numepochs = 1,
+  numepochs = 200,
   network_type = "lstm",
   seq_to_seq_unsync = T,
   bactch_size = 32
