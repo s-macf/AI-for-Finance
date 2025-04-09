@@ -390,13 +390,168 @@ draw_two_graph <- function(predictions1, actual1, predictions2, actual2, msg1, m
 ```
 
 ```{R fig.width=12, fig.height=4, echo=FALSE}
-predictions1 <- predictr(lstm_GS, x_train)
-predictions2 <- predictr(lstm_GS, x_test)
-draw_two_graph(predictions1, y_train, predictions2, y_test, "Train Data", "Test Data", "Grid Search Optimised Paramaters")
+predictions1_GS <- predictr(lstm_GS, x_train)
+predictions2_GS <- predictr(lstm_GS, x_test)
+draw_two_graph(predictions1_GS, y_train, predictions2_GS, y_test, "Train Data", "Test Data", "Grid Search Optimised Paramaters")
 ```
 
 ```{R fig.width=12, fig.height=4, echo=FALSE}
-predictions1 <- predictr(lstm_GA, x_train)
-predictions2 <- predictr(lstm_GA, x_test)
-draw_two_graph(predictions1, y_train, predictions2, y_test, "Train Data", "Test Data", "Genetic Algorithm Optimised Paramaters")
+predictions1_GA <- predictr(lstm_GA, x_train)
+predictions2_GA <- predictr(lstm_GA, x_test)
+draw_two_graph(predictions1_GA, y_train, predictions2_GA, y_test, "Train Data", "Test Data", "Genetic Algorithm Optimised Paramaters")
+```
+
+```{r}
+starting_funds = 10000
+investment = starting_funds
+shares = 0
+
+inverse_scale <- function(scaled_value, unscaled_min, unscaled_max) {
+  scaled_value * (unscaled_max - unscaled_min) + unscaled_min
+}
+
+predictions_scaled = predictr(lstm_GS, x_test)
+unscaled_min_close = min(data[, paste(best_asset, "Close", sep = ".")])
+unscaled_max_close = max(data[, paste(best_asset, "Close", sep = ".")])
+
+predictions_unscaled = inverse_scale(predictions_scaled, unscaled_min_close, unscaled_max_close)
+actual_unscaled = inverse_scale(y_test, unscaled_min_close, unscaled_max_close)
+#predictions_unscaled
+#actual_unscaled
+```
+
+```{r, based on closing}
+trading_rule = data.frame(
+  Date = index(tail(best_asset_data, nrow(y_test))),
+  actual_price = rep(NA, nrow(y_test)),
+  predicted_price = rep(NA, nrow(y_test)),
+  action = character(nrow(y_test)),
+  asset_value = numeric(nrow(y_test)),
+  shares_held = numeric(nrow(y_test))
+)
+
+trading_rule$asset_value[1] = investment
+trading_rule$shares_held[1] = shares
+trading_rule$actual_price = actual_unscaled
+trading_rule$predicted_price = predictions_unscaled
+
+threshold_buy = 0.05
+threshold_sell = -0.05
+
+for(i in 1:nrow(trading_rule)){
+  if(i>1){
+    investment = trading_rule$asset_value[i-1]
+    shares = trading_rule$shares_held[i-1]
+  }
+  current_price = trading_rule$actual_price[i]
+  predicted_price = trading_rule$predicted_price[i]
+  action = "HOLD"
+  
+  if(!is.na(predicted_price) && !is.na(current_price)){
+    predicted_change_percentage = (predicted_price - current_price) / current_price
+    if (predicted_change_percentage > threshold_buy && investment > 0) {
+      action = "BUY"
+      buy_quantity = floor(investment / current_price)
+      shares = shares + buy_quantity
+      investment = investment - (buy_quantity * current_price)
+    } else if (predicted_change_percentage < threshold_sell && shares > 0) {
+      action = "SELL"
+      sell_value = shares * current_price
+      investment = investment + sell_value
+      shares = 0
+    }
+  }
+  
+  trading_rule$action[i] = action
+  trading_rule$asset_value[i] = investment + (shares * current_price)
+  trading_rule$shares_held[i] = shares
+}
+```
+
+```{r, based on previous day}
+trading_rule = data.frame(
+  Date = index(tail(best_asset_data, nrow(y_test))),
+  actual_price = rep(NA, nrow(y_test)),
+  predicted_price = rep(NA, nrow(y_test)),
+  action = character(nrow(y_test)),
+  asset_value = numeric(nrow(y_test)),
+  shares_held = numeric(nrow(y_test))
+)
+
+trading_rule$asset_value[1] = investment
+trading_rule$shares_held[1] = shares
+trading_rule$actual_price = actual_unscaled
+trading_rule$predicted_price = predictions_unscaled
+
+threshold_buy = 0.01
+threshold_sell = -0.01
+
+next_day_action = character(nrow(trading_rule))
+next_day_action[1] = "HOLD"
+
+for(i in 1:(nrow(trading_rule) - 1)){
+  current_price = trading_rule$actual_price[i]
+  predicted_price = trading_rule$predicted_price[i]
+  action = "HOLD"
+
+  if(!is.na(predicted_price) && !is.na(current_price)){
+    predicted_change_percentage = (predicted_price - current_price) / current_price
+    if(predicted_change_percentage > threshold_buy){
+      action = "BUY"
+    } else if(predicted_change_percentage < threshold_sell){
+      action = "SELL"
+    } else if(predicted_change_percentage < threshold_buy && predicted_change_percentage > threshold_sell){
+      action = "HOLD"
+    }
+  }
+  next_day_action[i + 1] = action
+}
+
+for(i in 1:nrow(trading_rule)){
+  if(i > 1){
+    investment = trading_rule$asset_value[i-1]
+    shares = trading_rule$shares_held[i-1]
+  }
+
+  trade_action = next_day_action[i]
+  current_price = trading_rule$actual_price[i]
+
+  if(trade_action == "BUY" && investment > 0){
+    buy_quantity = floor(investment / current_price)
+    shares = shares + buy_quantity
+    investment = investment - (buy_quantity * current_price)
+  } else if(trade_action == "SELL" && shares > 0){
+    sell_value = shares * current_price
+    investment = investment + sell_value
+    shares = 0
+  }
+
+  trading_rule$action[i] = trade_action
+  trading_rule$asset_value[i] = investment + (shares * current_price)
+  trading_rule$shares_held[i] = shares
+}
+```
+
+```{r}
+final_asset_value = tail(trading_rule$asset_value, 1)
+initial_investment = starting_funds
+profit_loss = final_asset_value - initial_investment
+roi = (profit_loss / initial_investment) * 100
+
+cat("\nFinal Asset Value: $", round(final_asset_value, 2), "\n")
+cat("Profit/Loss: $", round(profit_loss, 2), "\n")
+cat("Return on Investment (ROI): ", round(roi, 2), "%\n")
+
+plot_trading_simulation = function(trade_log) {
+  plot(trading_rule$Date, trading_rule$asset_value, type = "l", col = "green",
+       xlab = "Date", ylab = "Asset Value ($)",
+       main = "Trading Strategy Performance")
+  grid()
+}
+
+plot_trading_simulation(trade_log)
+```
+
+```{r}
+print(trading_rule)
 ```
