@@ -1,11 +1,9 @@
 ---
 title: 'CS971: AI for Finance Assignment 2'
 author: "Stewart Macfarlane, Vladimir Lenkov, Alvee Kabir"
-date: "`r Sys.Date()`"
+date: "11-04-2025"
 output:
   pdf_document: default
-  html_document:
-    df_print: paged
 ---
 
 ```{R include=FALSE}
@@ -22,14 +20,22 @@ library(TTR)
 set.seed(09042025)
 ```
 
-# Data Selection
+# Problem Background
+
+
+
+# Asset Selection
+
+The initial assets were gathered using the S&P 500 index, a stock market index that tracks the performance of 500 of the largest trading companies in the United States. In addition to having an extensive collection of assets, this index represents a wide range of sectors including but not limited to technology, healthcare and finance. This serves as a solid foundation for selecting a significant asset for the project.
 
 ```{R}
-assets <- tq_index("SP500")
-head(assets)
+assets <- tq_index("SP500") # Load 500 assets from S&P
+head(assets) # Display the 500 assets
 ```
 
-```{R}
+Furthermore, the daily returns for each asset are retrieved to calculate the Sharpe ratio.
+
+```{R echo=TRUE, message=FALSE}
 load_daily_returns <- function(asset_symbols, startDate, endDate) {
   removed_assets <- c()
   
@@ -67,6 +73,14 @@ calc_sharpe_ratio <- function(returns, rf_rate) {
 }
 ```
 
+The performance of all 500 assets is evaluated and compared to one another based on their Sharpe ratios. The Sharpe ratio serves as a valuable tool for measuring investment prospects for a specific asset as it enables the comparison of the expected return for the level of risk being taken (risk-adjusted return). In this case, a risk-free rate is dynamically retrieved and used within the Sharpe ratio calculation for each asset.
+
+$$ S_a = \frac{E[R_a - R_b]}{\sigma_a}$$
+
+$$Where: \newline S_a = \text{Sharpe Ratio }  \newline E = \text{Expected Return } $$
+
+$$ \newline R_a = \text{Asset Return } \newline R_b = \text{Risk Free Rate } \newline \sigma_a = \text{Asset Risk}$$
+
 ```{R}
 rf_rate <- as.numeric(last(getSymbols("DGS3MO", src = "FRED", auto.assign = FALSE)))/100 /252
 best_res <- calc_sharpe_ratio(df[, 1], rf_rate)
@@ -79,6 +93,8 @@ for (col in colnames(df)) {
   }
 }
 ```
+
+Once all assets have been compared, the best-performing asset is selected to be used to make next-day predictions in alignment with a comprehensive trading rule. All relevant data is then retrieved, this includes opening, high, low and closing prices.
 
 ```{R}
 best_asset
