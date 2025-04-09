@@ -8,7 +8,7 @@ output:
     df_print: paged
 ---
 
-```{R}
+```{R include=FALSE}
 #install.packages("tidyquant")
 #install.packages("quantmod")
 #install.packages("GA")
@@ -204,7 +204,7 @@ y_val <- split_data$y_val
 
 # Optimisation Stuff
 
-```{R}
+```{R echo=TRUE, message=FALSE}
 # Define a tuning function that trains the LSTM and returns the mean squared error on the validation set
 tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_size) {
   model <- trainr(
@@ -227,7 +227,7 @@ tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_siz
 
 ## Grid Search
 
-```{R}
+```{R echo=TRUE, message=FALSE}
 # Set up grid search parameters (you can adjust or expand the grid as needed)
 learningrate_vals <- c(0.001, 0.01)
 hidden_dim_vals   <- c(16, 32)
@@ -246,7 +246,7 @@ results <- data.frame(
 )
 ```
 
-```{R}
+```{R echo=TRUE, message=FALSE}
 # Grid search
 for (lr in learningrate_vals) {
   for (hd in hidden_dim_vals) {
@@ -266,8 +266,8 @@ for (lr in learningrate_vals) {
             batch_size = bs,
             mse = current_mse
           ))
-          cat("Tested: lr=", lr, ", hd=", hd, ", nl=", nl, ", ne=", ne, ", bs=", bs, 
-              "-> MSE=", current_mse, "\n")
+          #cat("Tested: lr=", lr, ", hd=", hd, ", nl=", nl, ", ne=", ne, ", bs=", bs, 
+          #    "-> MSE=", current_mse, "\n")
         }
       }
     }
@@ -282,7 +282,7 @@ print(best_params)
 
 ## Genetic Algorithm
 
-```{R}
+```{R echo=TRUE, message=FALSE}
 fitness_function <- function(params) {
   learningrate <- params[1]
   hidden_dim <- round(params[2])
@@ -303,8 +303,8 @@ fitness_function <- function(params) {
 ga_result <- ga(
   type = "real-valued",
   fitness = fitness_function,
-  lower = c(0.001, 1, 1, 50, 1),
-  upper = c(0.01, 64, 5, 200, 64),  
+  lower = c(0.001, 1, 1, 1, 1),
+  upper = c(0.01, 64, 5, 1, 64),  
   popSize = 20, 
   maxiter = 100,  
   run = 20  
@@ -317,21 +317,21 @@ print(best_params)
 
 # LSTM
 
-```{R}
+```{R echo=TRUE, message=FALSE}
 model <- trainr(
   Y = y_train,
   X = x_train,
   learningrate = 0.001,
   hidden_dim = 32,
   num_layers = 1,
-  numepochs = 200,
+  numepochs = 1,
   network_type = "lstm",
   seq_to_seq_unsync = T,
   bactch_size = 32
 )
 ```
 
-```{R}
+```{R include=FALSE}
 draw_graph <- function(predictions, actual, msg, legend_pos = "bottomright") {
   ylim_range <- range(c(actual, predictions))
   plot(actual, type = "l", col = "blue", lwd = 2, main = msg,
@@ -341,12 +341,12 @@ draw_graph <- function(predictions, actual, msg, legend_pos = "bottomright") {
 }
 ```
 
-```{R}
+```{R fig.align="center", out.width="70%", echo=FALSE}
 predictions <- predictr(model, x_train)
 draw_graph(predictions, y_train, "LSTM Predictions vs Actual (Train Data)")
 ```
 
-```{R}
+```{R fig.align="center", out.width="70%", echo=FALSE}
 predictions <- predictr(model, x_test)
 draw_graph(predictions, y_test, "LSTM Predictions vs Actual (Test Data)")
 ```
