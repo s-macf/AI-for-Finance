@@ -357,11 +357,6 @@ train_lstm <- function(params){
 }
 ```
 
-```{R}
-test <- "5.5"
-as.numeric(test)
-```
-
 ```{R echo=TRUE, message=FALSE}
 lstm_GS <- train_lstm(best_params_GS)
 lstm_GA <- train_lstm(best_params_GA)
