@@ -58,6 +58,8 @@ load_daily_returns <- function(asset_symbols, startDate, endDate) {
 }
 ```
 
+The start and end date for the period to be used to make next-day predictions has been set to two months. This is so that enough data is present to reflect vital patterns to make predictions, however, not a long enough time period whereby the large quantity of historic data will negatively skew results.
+
 ```{R}
 asset_symbols <- assets$symbol
 startDate <- "2024-08-01"; endDate <- "2024-12-31"
@@ -122,6 +124,8 @@ best_asset_data$Volume_MA = volume_ma
 best_asset_data = na.omit(best_asset_data)
 #best_asset_data
 ```
+
+
 
 ```{R}
 data <- data.frame(best_asset_data[,1], best_asset_data[,2], best_asset_data[,3], best_asset_data[,4], best_asset_data[,5], best_asset_data[,6], best_asset_data[,7], best_asset_data[,8], best_asset_data[,9])
@@ -297,6 +301,8 @@ print(best_params)
 ```
 
 ## Genetic Algorithm
+
+
 
 ```{R echo=TRUE, message=FALSE}
 fitness_function <- function(params) {
