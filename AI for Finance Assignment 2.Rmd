@@ -28,7 +28,7 @@ set.seed(09042025)
 
 The initial assets were gathered using the S&P 500 index, a stock market index that tracks the performance of 500 of the largest trading companies in the United States. In addition to having an extensive collection of assets, this index represents a wide range of sectors including but not limited to technology, healthcare and finance. This serves as a solid foundation for selecting a significant asset for the project.
 
-```{R}
+```{R echo=TRUE, message=FALSE}
 assets <- tq_index("SP500") # Load 500 assets from S&P
 head(assets) # Display the 500 assets
 ```
@@ -183,7 +183,7 @@ x_test <- split_data$x_test
 y_test <- split_data$y_test
 ```
 
-```{R}
+```{R include=FALSE}
 str(features)
 ```
 
@@ -222,7 +222,7 @@ x_val <- split_data$x_val
 y_val <- split_data$y_val
 ```
 
-# Optimisation Stuff
+# Optimising LSTM Parameters
 
 ```{R echo=TRUE, message=FALSE}
 # Define a tuning function that trains the LSTM and returns the mean squared error on the validation set
@@ -294,8 +294,11 @@ for (lr in learningrate_vals) {
   }
 }
 
-# Identify the best parameter set (lowest MSE)
 best_params_GS <- results[which.min(results$mse), ]
+```
+
+```{R include=FALSE}
+# Identify the best parameter set (lowest MSE)
 cat("Best Hyperparameters:\n")
 print(best_params_GS)
 ```
@@ -333,6 +336,9 @@ ga_result <- ga(
 )
 
 best_params_GA <- ga_result@solution
+```
+
+```{R include=FALSE}
 cat("Best Hyperparameters:\n")
 print(best_params_GA)
 ```
