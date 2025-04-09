@@ -118,7 +118,6 @@ volume_ma = TTR::SMA(Vo(best_asset_data), n = 20)
 best_asset_data$RSI = rsi
 best_asset_data$MACD = macd
 best_asset_data$Volume_MA = volume_ma
-
 best_asset_data = na.omit(best_asset_data)
 ```
 
@@ -226,6 +225,8 @@ y_val <- split_data$y_val
 
 # Optimising LSTM Parameters
 
+The LSTM parameters are optimised using two techniques: grid search and genetic algorithms. This was done to compare the results from utilising traditional versus evolutionary approaches and conclude the pros and cons of each. Furthermore, the optimised parameters identified from this process are used by the LSTM to make predictions in conjunction with the proposed trading rule.
+
 ```{R echo=TRUE, message=FALSE}
 # Define a tuning function that trains the LSTM and returns the mean squared error on the validation set
 tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_size) {
@@ -248,6 +249,8 @@ tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_siz
 ```
 
 ## Grid Search
+
+Grid search is a traditional approach to identifying optimal hyperparameter values for machine learning models. In this approach, the key hyperparameters to be tested are listed inside a vector, which the algorithm then systematically iterates over each combination and records the result. In this case, the mean squared error (MSE) is used on validation data to determine the current performance.
 
 ```{R echo=TRUE, message=FALSE}
 # Set up grid search parameters (you can adjust or expand the grid as needed)
@@ -307,7 +310,7 @@ print(best_params_GS)
 
 ## Genetic Algorithm
 
-
+A genetic algorithm is an evolutionary process that mimics natural selection and genetics. This algorithm has been used to identify optimal hyperparameters within specified ranges (lower and upper). This implementation has a maximum of 100 iterations and will stop executing if the fitness does not improve after 20 iterations. The fitness is determined using the fitness function which evaluates performance against the MSE value.
 
 ```{R echo=TRUE, message=FALSE}
 fitness_function <- function(params) {
@@ -344,6 +347,10 @@ best_params_GA <- ga_result@solution
 cat("Best Hyperparameters:\n")
 print(best_params_GA)
 ```
+
+### Optimisation Comparisons
+
+Through experimenting with both of the above approaches key benefits and downfalls of each have been identified. First, Grid search is strictly limited to searching the specified hyperparameters whereas the GA solution can navigate the search space more effectively only being restricted to lower and upper bounds. Furthermore, both algorithms are computationally expensive, although, genetic algorithms have an edge as they can effectively terminate execution if the performance has not improved over a specified number of iterations, whereas grid search must evaluate all combinations. Finally, this difference between the two approaches is what sets them apart as a GA can get stuck in a local maximum and never converge to the optimal solution, on the other hand, grid search will evaluate all provided combinations guaranteeing the most optimal from the provided is found.
 
 # LSTM
 
