@@ -278,7 +278,7 @@ cat("Best Hyperparameters:\n")
 print(best_params)
 ```
 
-## GA
+## Genetic Algorithm
 
 ```{R}
 fitness_function <- function(params) {
