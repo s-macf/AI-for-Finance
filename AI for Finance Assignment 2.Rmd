@@ -88,7 +88,7 @@ best_asset
 best_asset_data <- getSymbols(best_asset, from = startDate, to = endDate, auto.assign = FALSE)
 ```
 
-## Data Preprocessing
+# Data Preprocessing
 
 ```{R}
 rsi = TTR::RSI(Cl(best_asset_data), n = 14)
