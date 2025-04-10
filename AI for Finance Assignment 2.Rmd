@@ -30,12 +30,19 @@ The initial assets were gathered using the S&P 500 index, a stock market index t
 
 ```{R echo=TRUE, message=FALSE}
 assets <- tq_index("SP500") # Load 500 assets from S&P
+```
+
+```{R include=FALSE}
+assets <- subset(assets, symbol != "-") # Remove broken symbol
+```
+
+```{R include=FALSE}
 head(assets) # Display the 500 assets
 ```
 
 Furthermore, the daily returns for each asset are retrieved to calculate the Sharpe ratio.
 
-```{R echo=TRUE, message=FALSE}
+```{R echo=TRUE, message=FALSE, warnings=FALSE}
 load_daily_returns <- function(asset_symbols, startDate, endDate) {
   removed_assets <- c()
   
@@ -44,8 +51,7 @@ load_daily_returns <- function(asset_symbols, startDate, endDate) {
       dailyReturn(getSymbols(sym, from = startDate, to = endDate, auto.assign = FALSE)),
       
       error = function(e) {
-        removed_assets <<- append(removed_assets, sym)
-        cat("\nSkipping asset:", sym, "\n")
+        removed_assets <<- append(removed_assets, sym); NULL
       }
     )
   })
