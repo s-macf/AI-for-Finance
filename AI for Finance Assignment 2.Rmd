@@ -165,6 +165,9 @@ train_test_split <- function(asset, seq_length, target_feature, test_size = 0.2)
   x_test  <- seq_data[(train_set_size + 1):nrow(seq_data), 1:(seq_length - 1), , drop = FALSE]
   y_test  <- seq_data[(train_set_size + 1):nrow(seq_data), seq_length, target_feature, drop = FALSE]
   
+  x_train <- x_train[, , setdiff(1:num_features, target_feature), drop = FALSE]
+  x_test  <- x_test[, , setdiff(1:num_features, target_feature), drop = FALSE]
+  
   return(list(x_train = x_train,
               y_train = y_train,
               x_test = x_test,
@@ -181,7 +184,7 @@ close <- paste(best_asset, "Close", sep = ".")
 rsi = "RSI"
 macd = "MACD"
 volume_ma = "Volume_MA"
-features <- data_scaled[, c(open, high, low, close, rsi, macd, volume_ma)]
+features <- data_scaled[, c(open, high, low, close, macd, volume_ma)]
 
 target_feature = 4
 split_data <- train_test_split(features, seq_length, target_feature)
@@ -313,10 +316,6 @@ run_grid_search <- function(lr_vals, hd_vals, nl_vals, ne_vals, bs_vals){
 ```
 
 ```{R include=FALSE}
-best_params_GS <- c(0.01, 128, 3, 200, 16)
-```
-
-```{R include=FALSE}
 # Identify the best parameter set (lowest MSE)
 cat("Best Hyperparameters:\n")
 print(best_params_GS)
@@ -362,10 +361,6 @@ run_ga <- function(){
 ```
 
 ```{R include=FALSE}
-best_params_GA <- c(0.004457504, 87.36089, 2.124116, 84.39587, 39.6531)
-```
-
-```{R include=FALSE}
 cat("Best Hyperparameters:\n")
 print(best_params_GA)
 ```
@@ -376,7 +371,9 @@ Through experimenting with both of the above approaches key benefits and downfal
 
 # LSTM
 
-```{R echo=TRUE, message=FALSE}
+```{R include = FALSE}
+# Code used to train models
+
 #train_lstm <- function(params){
 #  model <- trainr(
 #    Y = y_train,
@@ -392,6 +389,12 @@ Through experimenting with both of the above approaches key benefits and downfal
 #  )
 #  return(model)
 #}
+
+#set.seed(09042025)
+#lstm_GS <- train_lstm(best_params_GS)
+#lstm_GA <- train_lstm(best_params_GA)
+#saveRDS(lstm_GS, file = "lstm_GS.rds")
+#saveRDS(lstm_GA, file = "lstm_GA.rds")
 ```
 
 ```{R echo=TRUE, message=FALSE}
