@@ -395,7 +395,7 @@ draw_two_graph <- function(predictions1, actual1, predictions2, actual2, msg1, m
   draw_graph(predictions1, actual1, msg1)
   
   # Second graph
-  draw_graph(predictions2, actual2, msg2, "topleft")
+  draw_graph(predictions2, actual2, msg2)
   mtext(overall_title, outer = TRUE, cex = 1.5)
 }
 ```
@@ -565,4 +565,84 @@ plot_trading_simulation(trade_log)
 
 ```{r}
 print(trading_rule)
+```
+
+```{r}
+#Revised Dual-Indicator Trading Strategy
+
+threshold_buy <- 0.005         # Predicted change > 0.5%
+threshold_sell <- -0.005       # Predicted change < -0.5%
+oversold_threshold <- 70       # For a BUY, require RSI < 70 
+overbought_threshold <- 30     # For a SELL, require RSI > 30
+
+# Reinitialize simulation variables
+investment_dual <- 10000
+shares_dual <- 0
+
+# Build the trading log for the dual-indicator strategy 
+trading_rule_dual <- data.frame(
+  Date = index(tail(best_asset_data, nrow(y_test))),
+  actual_price = as.numeric(actual_unscaled),
+  predicted_price = as.numeric(predictions_unscaled),
+  RSI = as.numeric(tail(best_asset_data$RSI, nrow(y_test))),  
+  action = character(nrow(y_test)),
+  asset_value = numeric(nrow(y_test)),
+  shares_held = numeric(nrow(y_test))
+)
+
+trading_rule_dual$asset_value[1] <- investment_dual
+trading_rule_dual$shares_held[1] <- shares_dual
+
+# Simulation loop with debug prints for the first few iterations
+for (i in 1:nrow(trading_rule_dual)) {
+  if (i > 1) {
+    investment_dual <- trading_rule_dual$asset_value[i - 1]
+    shares_dual <- trading_rule_dual$shares_held[i - 1]
+  }
+  current_price <- trading_rule_dual$actual_price[i]
+  predicted_price <- trading_rule_dual$predicted_price[i]
+  current_rsi <- trading_rule_dual$RSI[i]
+  action <- "HOLD"
+  
+  if (!is.na(predicted_price) && !is.na(current_price) && !is.na(current_rsi)) {
+    predicted_change_percentage <- (predicted_price - current_price) / current_price
+    if (predicted_change_percentage > threshold_buy && current_rsi < oversold_threshold && investment_dual > 0) {
+      action <- "BUY"
+      buy_quantity <- floor(investment_dual / current_price)
+      shares_dual <- shares_dual + buy_quantity
+      investment_dual <- investment_dual - (buy_quantity * current_price)
+    } else if (predicted_change_percentage < threshold_sell && current_rsi > overbought_threshold && shares_dual > 0) {
+      action <- "SELL"
+      sell_value <- shares_dual * current_price
+      investment_dual <- investment_dual + sell_value
+      shares_dual <- 0
+    }
+  }
+  
+  trading_rule_dual$action[i] <- action
+  trading_rule_dual$asset_value[i] <- investment_dual + (shares_dual * current_price)
+  trading_rule_dual$shares_held[i] <- shares_dual
+}
+
+# Calculate final performance metrics
+final_asset_value <- tail(trading_rule_dual$asset_value, 1)
+profit_loss <- final_asset_value - 10000
+roi <- (profit_loss / 10000) * 100
+
+# Print results
+cat("\nFinal Asset Value: $", round(final_asset_value, 2), "\n")
+cat("Profit/Loss: $", round(profit_loss, 2), "\n")
+cat("Return on Investment (ROI):", round(roi, 2), "%\n")
+
+# Print the full table
+print(trading_rule_dual)
+
+# Plot the performance of the dual-indicator trading strategy
+plot_dual <- function(trade_log) {
+  plot(trade_log$Date, trade_log$asset_value, type = "l", col = "purple",
+       xlab = "Date", ylab = "Asset Value ($)",
+       main = "Dual-Indicator Strategy Performance")
+  grid()
+}
+plot_dual(trading_rule_dual)
 ```
