@@ -183,7 +183,8 @@ macd = "MACD"
 volume_ma = "Volume_MA"
 features <- data_scaled[, c(open, high, low, close, rsi, macd, volume_ma)]
 
-split_data <- train_test_split(features, seq_length, ncol(features))
+target_feature = 4
+split_data <- train_test_split(features, seq_length, target_feature)
 x_train <- split_data$x_train
 y_train <- split_data$y_train
 x_test <- split_data$x_test
