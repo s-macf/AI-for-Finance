@@ -395,7 +395,7 @@ draw_two_graph <- function(predictions1, actual1, predictions2, actual2, msg1, m
   draw_graph(predictions1, actual1, msg1)
   
   # Second graph
-  draw_graph(predictions2, actual2, msg2)
+  draw_graph(predictions2, actual2, msg2, "topleft")
   mtext(overall_title, outer = TRUE, cex = 1.5)
 }
 ```
