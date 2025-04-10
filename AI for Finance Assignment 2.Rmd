@@ -94,6 +94,8 @@ best_asset_data <- getSymbols(best_asset, from = startDate, to = endDate, auto.a
 
 # Data Preprocessing
 
+Before training the LSTM-based model, we first enrich our data with technical indicators (RSI, MACD, and others), then remove any missing values and normalize each feature. Normalization helps ensure that the ranges of different variables do not negatively impact model training. Afterwards, we structure the data as sequences for the network by selecting the features of interest, choosing an appropriate sequence length and splitting into training and test sets.
+
 ```{R include=FALSE}
 rsi = TTR::RSI(Cl(best_asset_data), n = 14)
 ema_short = TTR::EMA(Cl(best_asset_data), n = 12)
@@ -101,6 +103,7 @@ ema_long = TTR::EMA(Cl(best_asset_data), n = 26)
 macd = ema_short - ema_long
 volume_ma = TTR::SMA(Vo(best_asset_data), n = 20)
 ```
+We then add these new indicators as columns in our main dataset and remove any rows with missing values.
 
 ```{R}
 best_asset_data$RSI = rsi; best_asset_data$MACD = macd
@@ -110,6 +113,7 @@ best_asset_data$Volume_MA = volume_ma; best_asset_data = na.omit(best_asset_data
 ```{R include=FALSE}
 #best_asset_data
 ```
+Next, we normalize each column to the range [0,1] using a simple min-max scaling function to help the model converge more reliably during training. 
 
 ```{R}
 data <- data.frame(best_asset_data[,1:9])
@@ -120,6 +124,8 @@ data_scaled <- as.data.frame(lapply(data, min_max_normalize))
 ```{R include=FALSE}
 #data_scaled
 ```
+We now define a custom splitting function for time-series data. 
+The idea is to convert our continuous dataset into overlapping sequences of length `seq_length`. 
 
 ```{R}
 train_test_split <- function(asset, seq_length, target_feature, test_size = 0.2) {
@@ -136,6 +142,8 @@ train_test_split <- function(asset, seq_length, target_feature, test_size = 0.2)
   return(list(x_train = x_train,y_train = y_train,x_test = x_test,y_test = y_test))}
 ```
 
+With all preprocessing steps established, we can now select the columns to include and specify which feature to treat as our target for prediction. Below, we choose a sequence length of 8, meaning 7 steps for model inputs plus 1 step for the label. 
+
 ```{R}
 open <- paste(best_asset, "Open", sep = ".");close <- paste(best_asset, "Close", sep = ".")
 high <- paste(best_asset, "High", sep = ".");low <- paste(best_asset, "Low", sep = ".")
@@ -149,6 +157,8 @@ x_test <- split_data$x_test; y_test <- split_data$y_test
 ```{R include=FALSE}
 str(features)
 ```
+Finally, we split part of the training set again for validation. 
+This secondary split is helpful for hyperparameter tuning without contaminating our final test set.
 
 ```{R}
 split_validation <- function(x, y, valid_prop = 0.2) { total <- dim(x)[1]                    
