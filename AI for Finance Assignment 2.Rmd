@@ -248,7 +248,7 @@ run_ga <- function(){ ga_result <- ga(type = "real-valued",fitness = fitness_fun
 
 ## Optimisation Comparisons
 
-Through experimenting with both of the above approaches key benefits and downfalls of each have been identified. First, Grid search is strictly limited to searching the specified hyperparameters whereas the GA solution can navigate the search space more effectively only being restricted to lower and upper bounds. Furthermore, both algorithms are computationally expensive, although, genetic algorithms have an edge as they can effectively terminate execution if the performance has not improved over a specified number of iterations, whereas grid search must evaluate all combinations. Finally, this difference between the two approaches is what sets them apart as a GA can get stuck in a local maximum and never converge to the optimal solution, on the other hand, grid search will evaluate all provided combinations guaranteeing the most optimal from the provided is found. Overall, both methods gain a similar performance using MSE.
+Through experimenting with both of the above approaches key benefits and downfalls of each have been identified. First, Grid search is strictly limited to searching the specified hyperparameters whereas the GA solution can navigate the search space more effectively only being restricted to lower and upper bounds. Furthermore, both algorithms are computationally expensive, although, genetic algorithms have an edge as they can effectively terminate execution if the performance has not improved over a specified number of iterations, whereas grid search must evaluate all combinations. Finally, this difference between the two approaches is what sets them apart as a GA can get stuck in a local maximum and never converge to the optimal solution, on the other hand, grid search will evaluate all provided combinations guaranteeing the most optimal from the provided is found. Overall, both methods gain a similar performance using MSE. However, grid search slightly outperforms the GA result with an MSE score of 0.0161161 compared to 0.03577853 on the test (unseen) data, for this reason, the LSTM trained with optimised parameters from grid search will be used for algorithmic trading.
 
 ```{R include = FALSE}
 # Code used to train models
@@ -313,6 +313,11 @@ draw_two_graph(predictions1_GS, y_train, predictions2_GS, y_test, "Train Data", 
 predictions1_GA <- predictr(lstm_GA, x_train)
 predictions2_GA <- predictr(lstm_GA, x_test)
 draw_two_graph(predictions1_GA, y_train, predictions2_GA, y_test, "Train Data", "Test Data", "Genetic Algorithm Optimised Paramaters")
+```
+
+```{R include=FALSE}
+mean((predictions1_GS - drop(y_train))^2, na.rm = TRUE)
+mean((predictions1_GA - drop(y_train))^2, na.rm = TRUE)
 ```
 
 # Trading
