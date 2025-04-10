@@ -43,42 +43,25 @@ head(assets) # Display the 500 assets
 Furthermore, the daily returns for each asset are retrieved to calculate the Sharpe ratio.
 
 ```{R echo=TRUE, message=FALSE, warnings=FALSE}
-load_daily_returns <- function(asset_symbols, startDate, endDate) {
-  removed_assets <- c()
-  
+load_daily_returns <- function(asset_symbols, startDate, endDate) { removed_assets <- c()
   assets_train <- lapply(asset_symbols, function(sym) {
-    tryCatch(
-      dailyReturn(getSymbols(sym, from = startDate, to = endDate, auto.assign = FALSE)),
-      
-      error = function(e) {
-        removed_assets <<- append(removed_assets, sym); NULL
-      }
-    )
-  })
-  
+    tryCatch(dailyReturn(getSymbols(sym, from = startDate, to = endDate, auto.assign = FALSE)),
+      error = function(e) {removed_assets <<- append(removed_assets, sym); NULL})})
   asset_symbols <- setdiff(asset_symbols, removed_assets)
   df <- setNames(do.call(merge, c(assets_train, all = T)), asset_symbols)
-  df <- na.omit(df)
-  df <- df[, colSums(is.na(df)) < nrow(df)]
-  return(df)
-}
+  df <- na.omit(df); df <- df[, colSums(is.na(df)) < nrow(df)]; return(df)}
 ```
 
 The start and end date for the period to be used to make next-day predictions has been set to two months. This is so that enough data is present to reflect vital patterns to make predictions, however, not a long enough time period whereby the large quantity of historic data will negatively skew results.
 
 ```{R}
-asset_symbols <- assets$symbol
-startDate <- "2024-08-01"; endDate <- "2024-12-31"
+asset_symbols <- assets$symbol; startDate <- "2024-08-01"; endDate <- "2024-12-31"
 df <- load_daily_returns(asset_symbols, startDate, endDate)
 ```
 
 ```{R}
-calc_sharpe_ratio <- function(returns, rf_rate) {
-  mean_return <- mean(returns)
-  risk <- sd(returns)
-  sharpe_ratio <- ((mean_return - rf_rate) / risk) * sqrt(252)
-  return(sharpe_ratio)
-}
+calc_sharpe_ratio <- function(returns, rf_rate) {mean_return <- mean(returns); risk <- sd(returns)
+  sharpe_ratio <- ((mean_return - rf_rate) / risk) * sqrt(252); return(sharpe_ratio)}
 ```
 
 The performance of all 500 assets is evaluated and compared to one another based on their Sharpe ratios. The Sharpe ratio serves as a valuable tool for measuring investment prospects for a specific asset as it enables the comparison of the expected return for the level of risk being taken (risk-adjusted return). In this case, a risk-free rate is dynamically retrieved and used within the Sharpe ratio calculation for each asset.
@@ -89,15 +72,9 @@ $$R_a = \text{Asset Return } \newline R_b = \text{Risk Free Rate } \newline \sig
 
 ```{R}
 rf_rate <- as.numeric(last(getSymbols("DGS3MO", src = "FRED", auto.assign = FALSE)))/100 /252
-best_res <- calc_sharpe_ratio(df[, 1], rf_rate)
-best_asset <- NULL
-for (col in colnames(df)) {
-  curr_sharpe <- calc_sharpe_ratio(df[, col], rf_rate)
-  if (curr_sharpe > best_res) {
-    best_res <- curr_sharpe
-    best_asset <- col
-  }
-}
+best_res <- calc_sharpe_ratio(df[, 1], rf_rate); best_asset <- NULL
+for (col in colnames(df)) { curr_sharpe <- calc_sharpe_ratio(df[, col], rf_rate)
+  if (curr_sharpe > best_res) { best_res <- curr_sharpe; best_asset <- col}}
 ```
 
 ```{R include=FALSE}
@@ -112,7 +89,7 @@ best_asset_data <- getSymbols(best_asset, from = startDate, to = endDate, auto.a
 
 # Data Preprocessing
 
-```{R}
+```{R include=FALSE}
 rsi = TTR::RSI(Cl(best_asset_data), n = 14)
 ema_short = TTR::EMA(Cl(best_asset_data), n = 12)
 ema_long = TTR::EMA(Cl(best_asset_data), n = 26)
@@ -121,10 +98,8 @@ volume_ma = TTR::SMA(Vo(best_asset_data), n = 20)
 ```
 
 ```{R}
-best_asset_data$RSI = rsi
-best_asset_data$MACD = macd
-best_asset_data$Volume_MA = volume_ma
-best_asset_data = na.omit(best_asset_data)
+best_asset_data$RSI = rsi; best_asset_data$MACD = macd
+best_asset_data$Volume_MA = volume_ma; best_asset_data = na.omit(best_asset_data)
 ```
 
 ```{R include=FALSE}
@@ -132,11 +107,8 @@ best_asset_data = na.omit(best_asset_data)
 ```
 
 ```{R}
-data <- data.frame(best_asset_data[,1], best_asset_data[,2], best_asset_data[,3], best_asset_data[,4], best_asset_data[,5], best_asset_data[,6], best_asset_data[,7], best_asset_data[,8], best_asset_data[,9])
-min_max_normalize <- function(x) {
-  (x - min(x)) / (max(x) - min(x))
-}
-
+data <- data.frame(best_asset_data[,1:9])
+min_max_normalize <- function(x) {(x - min(x)) / (max(x) - min(x))}
 data_scaled <- as.data.frame(lapply(data, min_max_normalize))
 ```
 
@@ -147,48 +119,26 @@ data_scaled <- as.data.frame(lapply(data, min_max_normalize))
 ```{R}
 train_test_split <- function(asset, seq_length, target_feature, test_size = 0.2) {
   asset_matrix <- as.matrix(asset)
-  num_seq <- nrow(asset_matrix) - seq_length + 1
-  num_features <- ncol(asset_matrix)
-  
+  num_seq <- nrow(asset_matrix) - seq_length + 1; num_features <- ncol(asset_matrix)
   seq_data <- array(dim = c(num_seq, seq_length, num_features))
-  
   for (index in 1:(nrow(asset_matrix) - seq_length +1)) {
-    seq_data[index, , ] <- asset_matrix[index:(index + seq_length - 1), ]
-  }
-  
-  test_set_size <- round(test_size * nrow(seq_data))
-  train_set_size <- nrow(seq_data) - test_set_size
-  
+    seq_data[index, , ] <- asset_matrix[index:(index + seq_length - 1), ]}
+  test_set_size <- round(test_size * nrow(seq_data)); train_set_size <- nrow(seq_data) - test_set_size
   x_train <- seq_data[1:train_set_size, 1:(seq_length - 1), , drop = FALSE]
   y_train <- seq_data[1:train_set_size, seq_length, target_feature, drop = FALSE]
-  
   x_test  <- seq_data[(train_set_size + 1):nrow(seq_data), 1:(seq_length - 1), , drop = FALSE]
   y_test  <- seq_data[(train_set_size + 1):nrow(seq_data), seq_length, target_feature, drop = FALSE]
-  
-  return(list(x_train = x_train,
-              y_train = y_train,
-              x_test = x_test,
-              y_test = y_test))
-}
+  return(list(x_train = x_train,y_train = y_train,x_test = x_test,y_test = y_test))}
 ```
 
 ```{R}
-seq_length <- 8
-open <- paste(best_asset, "Open", sep = ".")
-high <- paste(best_asset, "High", sep = ".")
-low <- paste(best_asset, "Low", sep = ".")
-close <- paste(best_asset, "Close", sep = ".")
-rsi = "RSI"
-macd = "MACD"
-volume_ma = "Volume_MA"
+open <- paste(best_asset, "Open", sep = ".");close <- paste(best_asset, "Close", sep = ".")
+high <- paste(best_asset, "High", sep = ".");low <- paste(best_asset, "Low", sep = ".")
+rsi = "RSI"; macd = "MACD"; volume_ma = "Volume_MA"; seq_length <- 8
 features <- data_scaled[, c(open, high, low, close, macd, volume_ma)]
-
-target_feature = 4
-split_data <- train_test_split(features, seq_length, target_feature)
-x_train <- split_data$x_train
-y_train <- split_data$y_train
-x_test <- split_data$x_test
-y_test <- split_data$y_test
+split_data <- train_test_split(features, seq_length, target_feature=4)
+x_train <- split_data$x_train; y_train <- split_data$y_train
+x_test <- split_data$x_test; y_test <- split_data$y_test
 ```
 
 ```{R include=FALSE}
@@ -196,38 +146,17 @@ str(features)
 ```
 
 ```{R}
-# For hyperparameter tuning, we split part of x_train/y_train to act as a validation set
-# For example, we use 80% for training and 20% for validation
-split_validation <- function(x, y, valid_prop = 0.2) {
-  total <- dim(x)[1]                    
-  valid_size <- round(valid_prop * total)
-  train_size <- total - valid_size
-  
-  # Subset x without dropping dimensions
+split_validation <- function(x, y, valid_prop = 0.2) { total <- dim(x)[1]                    
+  valid_size <- round(valid_prop * total);train_size <- total - valid_size  
   x_train_tune <- x[1:train_size, , , drop = FALSE]
-  x_val <- x[(train_size + 1):total, , , drop = FALSE]
-  
-  # Force y to be a matrix to ensure two dimensions
-  y <- as.matrix(y)
-  
+  x_val <- x[(train_size + 1):total, , , drop = FALSE]; y <- as.matrix(y)
   y_train_tune <- y[1:train_size, , drop = FALSE]
   y_val <- y[(train_size + 1):total, , drop = FALSE]
-  
-  return(list(
-    x_train_tune = x_train_tune,
-    y_train_tune = y_train_tune,
-    x_val = x_val,
-    y_val = y_val
-  ))
-}
-
-
-# Split the training data for tuning 
+  return(list(x_train_tune = x_train_tune,y_train_tune = y_train_tune,
+    x_val = x_val,y_val = y_val))}
 split_data <- split_validation(x_train, y_train, valid_prop = 0.2)
-x_train_tune <- split_data$x_train_tune
-y_train_tune <- split_data$y_train_tune
-x_val <- split_data$x_val
-y_val <- split_data$y_val
+x_train_tune <- split_data$x_train_tune; y_train_tune <- split_data$y_train_tune
+x_val <- split_data$x_val; y_val <- split_data$y_val
 ```
 
 # Optimising LSTM Parameters
@@ -236,22 +165,11 @@ The LSTM parameters are optimised using two techniques: grid search and genetic 
 
 ```{R echo=TRUE, message=FALSE}
 tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_size) {
-  model <- trainr(
-    Y = y_train_tune,
-    X = x_train_tune,
-    learningrate = learningrate,
-    hidden_dim = hidden_dim,
-    num_layers = num_layers,
-    numepochs = numepochs,
-    network_type = "lstm",
-    seq_to_seq_unsync = TRUE,
-    batch_size = batch_size
-  )
-  # Generate predictions on the validation set
+  model <- trainr( Y = y_train_tune, X = x_train_tune, learningrate = learningrate,
+    hidden_dim = hidden_dim, num_layers = num_layers, numepochs = numepochs,
+    network_type = "lstm", seq_to_seq_unsync = TRUE,batch_size = batch_size)
   predictions <- predictr(model, x_val)
-  mse <- mean((predictions - y_val)^2, na.rm = TRUE)
-  return(mse)
-}
+  mse <- mean((predictions - y_val)^2, na.rm = TRUE); return(mse)}
 ```
 
 ## Grid Search
@@ -259,13 +177,11 @@ tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_siz
 Grid search is a traditional approach to identifying optimal hyperparameter values for machine learning models. In this approach, the key hyperparameters to be tested are listed inside a vector, which the algorithm then systematically iterates over each combination and records the result. In this case, the mean squared error (MSE) is used on validation data to determine the current performance.
 
 ```{R echo=TRUE, message=FALSE}
-# Set up grid search parameters (you can adjust or expand the grid as needed)
-lr_vals <- c(0.001, 0.005, 0.01)
-hd_vals <- c(8, 16, 32, 64, 128)
-nl_vals <- c(1, 2, 3)
-ne_vals <- c(50, 100, 150, 200)
-bs_vals <- c(8, 16, 32, 64)
+lr_vals <- c(0.001, 0.005, 0.01); hd_vals <- c(8, 16, 32, 64, 128) # Grid parameters
+nl_vals <- c(1, 2, 3); ne_vals <- c(50, 100, 150, 200); bs_vals <- c(8, 16, 32, 64)
+```
 
+```{R include=FALSE}
 # Initialize a data frame to store results
 results <- data.frame(
   learningrate = numeric(0),
@@ -277,36 +193,24 @@ results <- data.frame(
 )
 ```
 
-```{R echo=TRUE, message=FALSE}
-# Grid search
-run_grid_search <- function(lr_vals, hd_vals, nl_vals, ne_vals, bs_vals){
-  for (lr in lr_vals) {
-    for (hd in hd_vals) {
-      for (nl in nl_vals) {
-        for (ne in ne_vals) {
-          for (bs in bs_vals) {
-            current_mse <- tune_lstm(learningrate = lr,
-                                     hidden_dim = hd,
-                                     num_layers = nl,
-                                     numepochs = ne,
-                                     batch_size = bs)
-            results <<- rbind(results, data.frame(
+```{R include = FALSE}
+log_results <- function(lr, hd, nl, ne, bs, current_mse){
+  results <<- rbind(results, data.frame(
               learningrate = lr,
               hidden_dim = hd,
               num_layers = nl,
               numepochs = ne,
               batch_size = bs,
               mse = current_mse
-            ))
-            #cat("Tested: lr=", lr, ", hd=", hd, ", nl=", nl, ", ne=", ne, ", bs=", bs, 
-            #    "-> MSE=", current_mse, "\n")
-          }
-        }
-      }
-    }
-  }
+  ))
 }
+```
 
+```{R echo=TRUE, message=FALSE}
+run_grid_search <- function(lr_vals, hd_vals, nl_vals, ne_vals, bs_vals){
+  for (lr in lr_vals) {for (hd in hd_vals) {for (nl in nl_vals) {
+    for (ne in ne_vals) {for (bs in bs_vals) { current_mse <- tune_lstm(lr,hd,nl,ne,bs)
+            log_results(lr, hd, nl, ne, bs, current_mse)}}}}}}
 #run_grid_search(lr_vals, hd_vals, nl_vals, ne_vals, bs_vals)
 #best_params_GS <- results[which.min(results$mse), ]
 ```
@@ -323,37 +227,13 @@ A genetic algorithm is an evolutionary process that mimics natural selection and
 
 ```{R echo=TRUE, message=FALSE}
 fitness_function <- function(params) {
-  learningrate <- params[1]
-  hidden_dim <- round(params[2])
-  num_layers <- round(params[3])
-  numepochs <- round(params[4])
-  batch_size <- round(params[5])
-  
-  mse <- tune_lstm(
-    learningrate = learningrate,
-    hidden_dim = hidden_dim,
-    num_layers = num_layers,
-    numepochs = numepochs,
-    batch_size = batch_size
-  )
-  return(-mse)
-}
-
-run_ga <- function(){
-  ga_result <- ga(
-    type = "real-valued",
-    fitness = fitness_function,
-    lower = c(0.0001, 8, 1, 50, 8),
-    upper = c(0.01, 128, 3, 200, 64),  
-    popSize = 20, 
-    maxiter = 100,  
-    run = 20  
-  )
-  
-  return(ga_result)
-}
-#ga_result <- run_ga()
-#best_params_GA <- ga_result@solution
+  lr <- params[1]; hd <- round(params[2]); nl <- round(params[3])
+  ne <- round(params[4]); bs <- round(params[5])
+  mse <- tune_lstm(lr, hd, nl, ne, bs); return(-mse)}
+run_ga <- function(){ ga_result <- ga(type = "real-valued",fitness = fitness_function,
+    lower = c(0.0001, 8, 1, 50, 8),upper = c(0.01, 128, 3, 200, 64),  
+    popSize = 20,maxiter = 100,run = 20); return(ga_result)}
+#ga_result <- run_ga(); best_params_GA <- ga_result@solution
 ```
 
 ```{R include=FALSE}
@@ -365,7 +245,7 @@ run_ga <- function(){
 
 Through experimenting with both of the above approaches key benefits and downfalls of each have been identified. First, Grid search is strictly limited to searching the specified hyperparameters whereas the GA solution can navigate the search space more effectively only being restricted to lower and upper bounds. Furthermore, both algorithms are computationally expensive, although, genetic algorithms have an edge as they can effectively terminate execution if the performance has not improved over a specified number of iterations, whereas grid search must evaluate all combinations. Finally, this difference between the two approaches is what sets them apart as a GA can get stuck in a local maximum and never converge to the optimal solution, on the other hand, grid search will evaluate all provided combinations guaranteeing the most optimal from the provided is found. Overall, both methods gain a similar performance using MSE.
 
-# LSTM
+# LSTM Performance
 
 ```{R include = FALSE}
 # Code used to train models
@@ -386,14 +266,13 @@ Through experimenting with both of the above approaches key benefits and downfal
 #  return(model)
 #}
 
-#set.seed(09042025)
 #lstm_GS <- train_lstm(best_params_GS)
 #lstm_GA <- train_lstm(best_params_GA)
 #saveRDS(lstm_GS, file = "lstm_GS.rds")
 #saveRDS(lstm_GA, file = "lstm_GA.rds")
 ```
 
-```{R echo=TRUE, message=FALSE}
+```{R echo=TRUE, message=FALSE, include=FALSE}
 lstm_GS <- readRDS("lstm_GS.rds")
 lstm_GA <- readRDS("lstm_GA.rds")
 ```
@@ -432,6 +311,8 @@ predictions1_GA <- predictr(lstm_GA, x_train)
 predictions2_GA <- predictr(lstm_GA, x_test)
 draw_two_graph(predictions1_GA, y_train, predictions2_GA, y_test, "Train Data", "Test Data", "Genetic Algorithm Optimised Paramaters")
 ```
+
+# Trading
 
 ```{r}
 starting_funds = 10000
