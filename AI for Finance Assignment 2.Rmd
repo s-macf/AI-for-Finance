@@ -241,11 +241,9 @@ run_ga <- function(){ ga_result <- ga(type = "real-valued",fitness = fitness_fun
 #print(best_params_GA)
 ```
 
-### Optimisation Comparisons
+## Optimisation Comparisons
 
 Through experimenting with both of the above approaches key benefits and downfalls of each have been identified. First, Grid search is strictly limited to searching the specified hyperparameters whereas the GA solution can navigate the search space more effectively only being restricted to lower and upper bounds. Furthermore, both algorithms are computationally expensive, although, genetic algorithms have an edge as they can effectively terminate execution if the performance has not improved over a specified number of iterations, whereas grid search must evaluate all combinations. Finally, this difference between the two approaches is what sets them apart as a GA can get stuck in a local maximum and never converge to the optimal solution, on the other hand, grid search will evaluate all provided combinations guaranteeing the most optimal from the provided is found. Overall, both methods gain a similar performance using MSE.
-
-# LSTM Performance
 
 ```{R include = FALSE}
 # Code used to train models
