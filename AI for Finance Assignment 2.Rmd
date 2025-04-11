@@ -36,7 +36,7 @@ The goal of this project is to build a trading system that leverages advanced ma
 
 ## Related Work
 
-Recent work on machine learning-based trading strategies spans deep neural models, technical analysis, and evolutionary optimization. Recurrent architectures like LSTM networks have been widely applied to stock price prediction and trading signal generation, leveraging their ability to capture temporal patterns and often outperforming traditional statistical models [1]. Many studies enhance such models by incorporating popular technical indicators such as RSI and MACD as input features, effectively fusing signals with data-driven learning to improve predictive accuracy [2]. In addition, optimization techniques like genetic algorithms have been used to fine-tune both model hyperparameters and strategy parameters. For example, GAs optimizing LSTM settings have achieved better forecasting performance than untuned benchmarks and similarly have been applied to calibrate indicator-based trading rules to maximize metrics like the Sharpe ratio [1]. These combined approaches demonstrate that integrating LSTM-driven prediction with technical indicators and applying evolutionary optimization can yield more robust, profitable trading strategies in practice which is precisely what our project aims to do.
+Recent work on machine learning-based trading strategies spans deep neural models, technical analysis, and evolutionary optimisation. Recurrent architectures like LSTM networks have been widely applied to stock price prediction and trading signal generation, leveraging their ability to capture temporal patterns and often outperforming traditional statistical models [1]. Many studies enhance such models by incorporating popular technical indicators such as RSI and MACD as input features, effectively fusing signals with data-driven learning to improve predictive accuracy [2]. In addition, optimisation techniques like genetic algorithms have been used to fine-tune both model hyperparameters and strategy parameters. For example, GAs optimising LSTM settings have achieved better forecasting performance than untuned benchmarks and similarly have been applied to calibrate indicator-based trading rules to maximise metrics like the Sharpe ratio [1]. These combined approaches demonstrate that integrating LSTM-driven prediction with technical indicators and applying evolutionary optimisation can yield more robust, profitable trading strategies in practice which aligns with the aim of this project.
 
 # Asset Selection
 
@@ -105,7 +105,7 @@ best_asset_data <- getSymbols(best_asset, from = startDate, to = endDate, auto.a
 
 # Data Preprocessing
 
-Before training the LSTM-based model, we first enrich our data with technical indicators (RSI, MACD, and others), then remove any missing values and normalize each feature. Normalization helps ensure that the ranges of different variables do not negatively impact model training. Afterwards, we structure the data as sequences for the network by selecting the features of interest, choosing an appropriate sequence length and splitting into training and test sets.
+Before training the LSTM-based model, we first enrich our data with technical indicators (RSI, MACD, and others), then remove any missing values and normalise each feature. Normalisation helps ensure that the ranges of different variables do not negatively impact model training. Afterwards, we structure the data as sequences for the network by selecting the features of interest, choosing an appropriate sequence length and splitting into training and test sets.
 
 ```{R include=FALSE}
 rsi = TTR::RSI(Cl(best_asset_data), n = 14)
@@ -124,7 +124,7 @@ best_asset_data$Volume_MA = volume_ma; best_asset_data = na.omit(best_asset_data
 ```{R include=FALSE}
 #best_asset_data
 ```
-Next, we normalize each column to the range [0,1] using a simple min-max scaling function to help the model converge more reliably during training. 
+Next, we normalise each column to the range [0,1] using a simple min-max scaling function to help the model converge more reliably during training. 
 
 ```{R}
 data <- data.frame(best_asset_data[,1:9])
@@ -469,7 +469,7 @@ run_tensorflow_grid_search <- function(lr_vals, hd_vals, ne_vals, bs_vals){
 #print(best_params)
 ```
 
-Below, we define a deeper LSTM architecture using TensorFlow. The network consists of three LSTM layers stacked on top of each other, this is then followed by a dense layer that outputs a single value. Stacking multiple LSTM layers helps the model capture more complex temporal patterns in our time series data. We compile the model with the Adam optimiser and use MSE as the primary loss function. Finally, we train the model for 200 epochs while feeding samples in batches of size 32 at each iteration. Given the success of grid search on the previous LSTM, this method has been employed again to optimise the following parameters: learning rate, hidden dimensions, number of epochs and batch size.
+Below, we define a deeper LSTM architecture using TensorFlow. The network consists of three LSTM layers stacked on top of each other, this is then followed by a dense layer that outputs a single value. Stacking multiple LSTM layers helps the model capture more complex temporal patterns in our time series data. We compile the model with the Adam optimiser and use MSE as the primary loss function. Finally, we train the model for 200 epochs while feeding samples as a specified batch-size at each iteration. Given the success of grid search on the previous LSTM, this method has been employed again to optimise the following parameters: learning rate, hidden dimensions, number of epochs and batch size. The final MSE score after this process on the test data equals 0.003582457, a significant improvement over the previous results.
 
 ```{R echo=TRUE, message=FALSE, warning=FALSE}
 #lr <- best_params$learningrate; hd <- best_params$hidden_dim
@@ -488,6 +488,16 @@ train_model <- function(lr, hd, ne, bs){
 #model <- train_model(lr, hd, ne, bs)
 #save_model_hdf5(model, "tensorflow_lstm.keras")
 model <- load_model_hdf5("tensorflow_lstm.keras")
+```
+
+```{R include = FALSE}
+predictions <- model %>% predict(x_test)
+mse <- mean((predictions[,,drop=TRUE] - y_test)^2, na.rm = TRUE)
+mse
+```
+```{R include=FALSE}
+dim(predictions)
+dim(y_test)
 ```
 
 ```{R fig.width=12, fig.height=4, echo=FALSE, message=FALSE}
@@ -539,7 +549,8 @@ for(i in 1:nrow(trading_rule)){
     predicted_change_percentage = (predicted_price - current_price) / current_price
     if(predicted_change_percentage > threshold_buy && cash_on_hand > current_price){
       action = "BUY"
-    } else if(predicted_change_percentage < threshold_sell && cash_on_hand < current_price && shares > 0){action = "SELL"}}
+    } else if(predicted_change_percentage < threshold_sell && 
+    cash_on_hand < current_price && shares > 0){action = "SELL"}}
   trading_rule$action[i] = action
   previous_asset_value = trading_rule$asset_value[i]
   if(i > 1){
@@ -554,7 +565,8 @@ for(i in 1:nrow(trading_rule)){
       last_buy_price = current_price}
   } else if(trading_rule$action[i] == "SELL" && shares > 0){
     sell_value = shares * current_price
-    if (last_buy_price > 0 && (current_price - last_buy_price) / last_buy_price < loss_minimisation_threshold) {
+    if (last_buy_price > 0 && (current_price - last_buy_price) / last_buy_price 
+        < loss_minimisation_threshold) {
       cash_on_hand = cash_on_hand + sell_value
       shares = 0
       last_buy_price = 0
@@ -615,7 +627,8 @@ trading_rule_dual <- data.frame(
   daily_profit_loss = numeric(nrow(y_test)))
 trading_rule_dual$asset_value[1] <- investment_dual; trading_rule_dual$shares_held[1] <- shares_dual
 trading_rule_dual$cash_held[1] <- cash_on_hand; trading_rule_dual$daily_profit_loss[1] <- 0
-trading_rule_dual$actual_price <- actual_unscaled; trading_rule_dual$predicted_price <- predictions_unscaled
+trading_rule_dual$actual_price <- actual_unscaled
+trading_rule_dual$predicted_price <- predictions_unscaled
 # Simulation loop with debug prints for the first few iterations
 for(i in 1:nrow(trading_rule_dual)){
   current_price = trading_rule_dual$actual_price[i]
@@ -624,9 +637,11 @@ for(i in 1:nrow(trading_rule_dual)){
   action = "HOLD"
   if(!is.na(predicted_price) && !is.na(current_price) && !is.na(current_rsi)){
     predicted_change_percentage = (predicted_price - current_price) / current_price
-    if(predicted_change_percentage > threshold_buy && current_rsi < oversold_threshold && cash_on_hand > current_price){
+    if(predicted_change_percentage > threshold_buy && current_rsi < oversold_threshold
+    && cash_on_hand > current_price){
       action = "BUY"
-    } else if(predicted_change_percentage < threshold_sell && current_rsi > overbought_threshold && shares_dual > 0){
+    } else if(predicted_change_percentage < threshold_sell 
+       && current_rsi > overbought_threshold && shares_dual > 0){
       action = "SELL"}}
   trading_rule_dual$action[i] = action
   previous_asset_value = trading_rule_dual$asset_value[i]
@@ -642,7 +657,8 @@ for(i in 1:nrow(trading_rule_dual)){
       last_buy_price = current_price}
   } else if(trading_rule_dual$action[i] == "SELL" && shares_dual > 0){
     sell_value = shares_dual * current_price
-    if (last_buy_price > 0 && (current_price - last_buy_price) / last_buy_price < loss_minimisation_threshold) {
+    if (last_buy_price > 0 && (current_price - last_buy_price) / last_buy_price
+       < loss_minimisation_threshold) {
       cash_on_hand = cash_on_hand + sell_value
       shares_dual = 0
       last_buy_price = 0
