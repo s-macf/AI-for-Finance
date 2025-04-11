@@ -382,30 +382,113 @@ x_test <- split_data$x_test; y_test <- split_data$y_test
 
 ```
 
+```{R include = FALSE}
+# Set up grid search parameters (you can adjust or expand the grid as needed)
+lr_vals <- c(0.001, 0.005, 0.01)
+hd_vals <- c(8, 16, 32, 64, 128)
+ne_vals <- c(50, 100, 150, 200)
+bs_vals <- c(8, 16, 32, 64)
+
+# Initialize a data frame to store results
+results <- data.frame(
+  learningrate = numeric(0),
+  hidden_dim = numeric(0),
+  numepochs = numeric(0),
+  batch_size = numeric(0),
+  mse = numeric(0)
+)
+```
+
+```{R include = FALSE}
+tune_tensorflow_lstm <- function(lr, hd, ne, bs){
+  # Build an LSTM model
+  model <- keras_model_sequential() %>%
+    layer_lstm(units = hd, input_shape = c(7, 6), return_sequences = TRUE) %>%
+    layer_lstm(units = hd, return_sequences = TRUE) %>%  
+    layer_lstm(units = hd) %>%  
+    layer_dense(units = 1, activation = "tanh")  
+  
+  # Compile the model
+  model %>% compile(
+    optimizer = optimizer_adam(learning_rate = lr),
+    loss = "mse",
+    metrics = c("mse")
+  )
+  
+  # Train the model
+  history <- model %>% fit(
+    x_train, y_train,
+    epochs = ne, batch_size = bs,
+    validation_split = 0.2,
+    verbose = 0
+  )
+  
+  final_loss_val <- tail(history$metrics$val_loss, n = 1)
+  #cat("Final MSE on val data:", final_loss_val, "\n")
+  return (final_loss_val)
+}
+```
+
+```{R include = FALSE}
+# Grid search
+run_tensorflow_grid_search <- function(lr_vals, hd_vals, ne_vals, bs_vals){
+  for (lr in lr_vals) {
+    for (hd in hd_vals) {
+        for (ne in ne_vals) {
+          for (bs in bs_vals) {
+            current_mse <- tune_tensorflow_lstm(lr, hd, ne, bs)
+            
+            results <<- rbind(results, data.frame(
+              learningrate = lr,
+              hidden_dim = hd,
+              numepochs = ne,
+              batch_size = bs,
+              mse = current_mse
+            ))
+            cat("Tested: lr=", lr, ", hd=", hd, ", ne=", ne, ", bs=", bs, 
+                "-> MSE=", current_mse, "\n")
+          }
+        }
+    }
+  }
+}
+  
+#run_tensorflow_grid_search(lr_vals, hd_vals, ne_vals, bs_vals)
+
+#best_params <- results[which.min(results$mse), ]
+#cat("Best Hyperparameters:\n")
+#print(best_params)
+```
+
 ```{R echo=TRUE, message=FALSE, warning=FALSE}
-# Build an LSTM model
-model <- keras_model_sequential() %>%
-  layer_lstm(units = 128, input_shape = c(7, 6), return_sequences = TRUE) %>%
-  layer_lstm(units = 128, return_sequences = TRUE) %>%  
-  layer_lstm(units = 128) %>%  
-  layer_dense(units = 1, activation = "tanh")  
+lr <- 0.001; hd <- 64; ne <- 200; bs <- 8
+train_model <- function(lr, hd, ne, bs){
+  model <- keras_model_sequential() %>%
+    layer_lstm(units = 128, input_shape = c(7, 6), return_sequences = TRUE) %>%
+    layer_lstm(units = 128, return_sequences = TRUE) %>%  
+    layer_lstm(units = 128) %>%  
+    layer_dense(units = 1, activation = "tanh")  
 
-# Compile the model
-model %>% compile(
-  optimizer = "adam",
-  loss = "mse",
-  metrics = c("mse")
-)
+  # Compile the model
+  model %>% compile(
+    optimizer = "adam",
+    loss = "mse",
+    metrics = c("mse")
+  )
 
-# Train the model
-model %>% fit(
-  x_train, y_train,
-  epochs = 200, batch_size = 32,
-  verbose = 0
-)
+  # Train the model
+  model %>% fit(
+    x_train, y_train,
+    epochs = 200, batch_size = 32,
+    verbose = 0
+  )
 
-# Model summary
-#summary(model)
+  return (model)
+}
+
+#model <- train_model(lr, hd, ne, bs)
+#save_model_hdf5(model, "tensorflow_lstm.keras")
+model <- load_model_hdf5("tensorflow_lstm.keras")
 ```
 
 ```{R fig.width=12, fig.height=4, echo=FALSE}
