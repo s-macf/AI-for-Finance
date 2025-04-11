@@ -267,7 +267,7 @@ run_ga <- function(){ ga_result <- ga(type = "real-valued",fitness = fitness_fun
 
 ## Optimisation Comparisons
 
-Through experimenting with both of the above approaches key benefits and downfalls of each have been identified. First, Grid search is strictly limited to searching the specified hyperparameters whereas the GA solution can navigate the search space more effectively only being restricted to lower and upper bounds. Furthermore, both algorithms are computationally expensive, although, genetic algorithms have an edge as they can effectively terminate execution if the performance has not improved over a specified number of iterations, whereas grid search must evaluate all combinations. Finally, this difference between the two approaches is what sets them apart as a GA can get stuck in a local maximum and never converge to the optimal solution, on the other hand, grid search will evaluate all provided combinations guaranteeing the most optimal from the provided is found. Overall, both methods gain a similar performance using MSE. However, grid search slightly outperforms the GA result with an MSE score of 0.0161161 compared to 0.03577853 on the test (unseen) data, for this reason, the LSTM trained with optimised parameters from grid search will be used for algorithmic trading.
+Through experimenting with both of the above approaches key benefits and downfalls of each have been identified. First, Grid search is strictly limited to searching the specified hyperparameters whereas the GA solution can navigate the search space more effectively only being restricted to lower and upper bounds. Furthermore, both algorithms are computationally expensive, although, genetic algorithms have an edge as they can effectively terminate execution if the performance has not improved over a specified number of iterations, whereas grid search must evaluate all combinations. Finally, this difference between the two approaches is what sets them apart as a GA can get stuck in a local maximum and never converge to the optimal solution, on the other hand, grid search will evaluate all provided combinations guaranteeing the most optimal from the provided is found. Overall, both methods gain a similar performance using MSE. However, grid search slightly outperforms the GA result with an MSE score of 0.0161161 compared to 0.03577853 on the test (unseen) data. 
 
 ```{R include = FALSE}
 # Code used to train models
@@ -492,7 +492,7 @@ draw_two_graph(predictions1, y_train, predictions2, y_test, "Train Data", "Test 
 
 # Trading
 
-A trading strategy is a systematic plan for making trading decisions in the financial markets. Based on the price predictions made using the Grid Search (GS) and Genetic Algorithm (GA) LSTM models, two different trading strategies have been utilised:
+A trading strategy is a systematic plan for making trading decisions in the financial markets. Based on the price predictions made using tensorflow LSTM model, two different trading strategies have been utilised:
 1. Prediction-Based strategy
 2. Dual-Indicator strategy
 
@@ -511,7 +511,7 @@ actual_unscaled = inverse_scale(y_test, unscaled_min_close, unscaled_max_close)
 
 ## Prediction-Based strategy
 
-This strategy relies on the pre-trained GA LSTM model to predict the closing price of the asset for the next day. Based on the predictions, a "BUY" action is triggered and shares are bought when the predicted price for the next day is greater than the current price by a threshold of 1% (0.01) and if there is sufficient cash on hand to execute the purchase. If both conditions are satisfied, then the maximum number of shares affordable is bought. Otherwise, no shares will be purchased. On the other hand, a "SELL" action is triggered and shares are sold off when the predicted price for the next day is less than the current price by a threshold of -1% (-0.01) and if shares are currently held. If both conditions are satisfied, then shares can be sold. Additionally, a sub-action "SELL OUT" is triggered when the current price drops below the last buying price by more than a loss minimisation threshold of 5% (-0.05). This action is taken to minimise losses. If neither a buy or sell condition is met, then the "HOLD" action is triggered. Finally on the last day, all of the remaining shares are sold off which acts as the final day liquidation.
+This strategy relies on the pre-trained TensorFlow LSTM model to predict the closing price of the asset for the next day. Based on the predictions, a "BUY" action is triggered and shares are bought when the predicted price for the next day is greater than the current price by a threshold of 1% (0.01) and if there is sufficient cash on hand to execute the purchase. If both conditions are satisfied, then the maximum number of shares affordable is bought. Otherwise, no shares will be purchased. On the other hand, a "SELL" action is triggered and shares are sold off when the predicted price for the next day is less than the current price by a threshold of -1% (-0.01) and if shares are currently held. If both conditions are satisfied, then shares can be sold. Additionally, a sub-action "SELL OUT" is triggered when the current price drops below the last buying price by more than a loss minimisation threshold of 5% (-0.05). This action is taken to minimise losses. If neither a buy or sell condition is met, then the "HOLD" action is triggered. Finally on the last day, all of the remaining shares are sold off which acts as the final day liquidation.
 
 ```{r}
 starting_funds = 10000
@@ -615,7 +615,7 @@ print(trading_rule)
 
 ## Dual-Indicator strategy
 
-The Dual-Indicator strategy is similar to the Prediction-Based strategy, but utlises Relative Strength Index (RSI), a momentum indicator, alongside the LSTM predicted price movements. The conditions for "BUY" action to trigger is similar with the addition of checking whether the oversold threshold is below 70. Consequently for "SELL", the overbought threshold needs to be above 30 along with the other conditions.
+The Dual-Indicator strategy is similar to the Prediction-Based strategy, but utlises Relative Strength Index (RSI), a momentum indicator, alongside the LSTM predicted price movements. The conditions for "BUY" action to trigger is similar (with minor changes in the threshold buy value) with the addition of checking whether the oversold threshold is below 70. Consequently for "SELL", the overbought threshold needs to be above 30 along with the other conditions (with minor changes in the threshold sell value).
 
 ```{r}
 #Revised Dual-Indicator Trading Strategy
@@ -726,7 +726,7 @@ print(trading_rule_dual)
 
 ## Comparison
 
-The profit is calculated based on the final asset value subtracted by the initial investment in trading. Daily profits and losses are tracked based on the changes in the asset value each day. In the end, the trading strategy performance (based on the value of the asset) and daily profit/loss are plotted to get a visual representation of the strategy. These are then compared for both strategies to gain a visual understanding of their performance. 
+The profit is calculated based on the final asset value subtracted by the initial investment in trading. Daily profits and losses are tracked based on the changes in the asset value each day. In the end, the trading strategy performance (based on the value of the asset) and daily profit/loss are plotted to get a visual representation of the strategy. These are then compared for both strategies to gain a visual understanding of their performance. It can be observed that the Dual-Indicator trading strategy outperforms the Prediction-Based strategy. This can be attributed to RSI acting as another filter to add momentum to the trades and filter out less reliable prediction-based signals.
 
 ```{r}
 par(mfrow = c(1, 2))
