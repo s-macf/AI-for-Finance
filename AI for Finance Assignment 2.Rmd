@@ -63,7 +63,8 @@ load_daily_returns <- function(asset_symbols, startDate, endDate) { removed_asse
       error = function(e) {removed_assets <<- append(removed_assets, sym); NULL})})
   asset_symbols <- setdiff(asset_symbols, removed_assets)
   df <- setNames(do.call(merge, c(assets_train, all = T)), asset_symbols)
-  df <- na.omit(df); df <- df[, colSums(is.na(df)) < nrow(df)]; return(df)}
+  df <- na.omit(df); df <- df[, colSums(is.na(df)) < nrow(df)]
+  return(df)}
 ```
 
 The start and end date for the period to be used to make next-day predictions has been set to two months. This is so that enough data is present to reflect vital patterns to make predictions, however, not a long enough time period whereby the large quantity of historic data will negatively skew results.
@@ -75,7 +76,8 @@ df <- load_daily_returns(asset_symbols, startDate, endDate)
 
 ```{R}
 calc_sharpe_ratio <- function(returns, rf_rate) {mean_return <- mean(returns); risk <- sd(returns)
-  sharpe_ratio <- ((mean_return - rf_rate) / risk) * sqrt(252); return(sharpe_ratio)}
+  sharpe_ratio <- ((mean_return - rf_rate) / risk) * sqrt(252)
+  return(sharpe_ratio)}
 ```
 
 The performance of all 500 assets is evaluated and compared to one another based on their Sharpe ratios. The Sharpe ratio serves as a valuable tool for measuring investment prospects for a specific asset as it enables the comparison of the expected return for the level of risk being taken (risk-adjusted return). In this case, a risk-free rate is dynamically retrieved and used within the Sharpe ratio calculation for each asset.
@@ -193,7 +195,8 @@ tune_lstm <- function(learningrate, hidden_dim, num_layers, numepochs, batch_siz
     hidden_dim = hidden_dim, num_layers = num_layers, numepochs = numepochs,
     network_type = "lstm", seq_to_seq_unsync = TRUE,batch_size = batch_size)
   predictions <- predictr(model, x_val)
-  mse <- mean((predictions - y_val)^2, na.rm = TRUE); return(mse)}
+  mse <- mean((predictions - y_val)^2, na.rm = TRUE)
+  return(mse)}
 ```
 
 ## Grid Search
@@ -253,10 +256,12 @@ A genetic algorithm is an evolutionary process that mimics natural selection and
 fitness_function <- function(params) {
   lr <- params[1]; hd <- round(params[2]); nl <- round(params[3])
   ne <- round(params[4]); bs <- round(params[5])
-  mse <- tune_lstm(lr, hd, nl, ne, bs); return(-mse)}
+  mse <- tune_lstm(lr, hd, nl, ne, bs)
+  return(-mse)}
 run_ga <- function(){ ga_result <- ga(type = "real-valued",fitness = fitness_function,
     lower = c(0.0001, 8, 1, 50, 8),upper = c(0.01, 128, 3, 200, 64),  
-    popSize = 20,maxiter = 100,run = 20); return(ga_result)}
+    popSize = 20,maxiter = 100,run = 20)
+    return(ga_result)}
 #ga_result <- run_ga(); best_params_GA <- ga_result@solution
 ```
 
@@ -478,7 +483,8 @@ train_model <- function(lr, hd, ne, bs){
   model %>% compile( optimizer = optimizer_adam(learning_rate = lr),
     loss = "mse", metrics = c("mse"))
   history <- model %>% fit( x_train, y_train, epochs = ne, batch_size = bs,
-    validation_split = 0.2, verbose = 0); return(model)}
+    validation_split = 0.2, verbose = 0)
+    return(model)}
 #model <- train_model(lr, hd, ne, bs)
 #save_model_hdf5(model, "tensorflow_lstm.keras")
 model <- load_model_hdf5("tensorflow_lstm.keras")
@@ -490,7 +496,7 @@ predictions2 <- model %>% predict(x_test)
 draw_two_graph(predictions1, y_train, predictions2, y_test, "Train Data", "Test Data", "TensorFlow LSTM Optimised Parameters")
 ```
 
-# Trading
+# Algorithmic Trading
 
 A trading strategy is a systematic plan for making trading decisions in the financial markets. Based on the price predictions made using tensorflow LSTM model, two different trading strategies have been utilised:
 1. Prediction-Based strategy
@@ -500,8 +506,7 @@ Before the strategies can be implemented, the data for backtesting is prepared. 
 
 ```{r}
 inverse_scale <- function(scaled_value, unscaled_min, unscaled_max) {
-  scaled_value * (unscaled_max - unscaled_min) + unscaled_min
-}
+  scaled_value * (unscaled_max - unscaled_min) + unscaled_min}
 predictions_scaled = model %>% predict(x_test)
 unscaled_min_close = min(data[, paste(best_asset, "Close", sep = ".")])
 unscaled_max_close = max(data[, paste(best_asset, "Close", sep = ".")])
@@ -514,62 +519,39 @@ actual_unscaled = inverse_scale(y_test, unscaled_min_close, unscaled_max_close)
 This strategy relies on the pre-trained TensorFlow LSTM model to predict the closing price of the asset for the next day. Based on the predictions, a "BUY" action is triggered and shares are bought when the predicted price for the next day is greater than the current price by a threshold of 1% (0.01) and if there is sufficient cash on hand to execute the purchase. If both conditions are satisfied, then the maximum number of shares affordable is bought. Otherwise, no shares will be purchased. On the other hand, a "SELL" action is triggered and shares are sold off when the predicted price for the next day is less than the current price by a threshold of -1% (-0.01) and if shares are currently held. If both conditions are satisfied, then shares can be sold. Additionally, a sub-action "SELL OUT" is triggered when the current price drops below the last buying price by more than a loss minimisation threshold of 5% (-0.05). This action is taken to minimise losses. If neither a buy or sell condition is met, then the "HOLD" action is triggered. Finally on the last day, all of the remaining shares are sold off which acts as the final day liquidation.
 
 ```{r}
-starting_funds = 10000
-investment = starting_funds
-cash_on_hand = starting_funds
-shares = 0
-
+starting_funds = 10000; investment = starting_funds
+cash_on_hand = starting_funds; shares = 0
 trading_rule = data.frame(
-  Date = index(tail(best_asset_data, nrow(y_test))),
-  actual_price = rep(NA, nrow(y_test)),
-  predicted_price = rep(NA, nrow(y_test)),
-  action = character(nrow(y_test)),
-  asset_value = numeric(nrow(y_test)),
-  shares_held = numeric(nrow(y_test)),
-  cash_held = numeric(nrow(y_test)),
-  daily_profit_loss = numeric(nrow(y_test))
-)
-
-trading_rule$asset_value[1] = starting_funds
-trading_rule$shares_held[1] = shares
-trading_rule$cash_held[1] = cash_on_hand
-trading_rule$daily_profit_loss[1] = 0
-trading_rule$actual_price = actual_unscaled
-trading_rule$predicted_price = predictions_unscaled
-threshold_buy = 0.01
-threshold_sell = -0.01
-loss_minimisation_threshold = -0.05
-last_buy_price = 0
-
+  Date = index(tail(best_asset_data, nrow(y_test))), actual_price = rep(NA, nrow(y_test)),
+  predicted_price = rep(NA, nrow(y_test)), action = character(nrow(y_test)),
+  asset_value = numeric(nrow(y_test)), shares_held = numeric(nrow(y_test)),
+  cash_held = numeric(nrow(y_test)), daily_profit_loss = numeric(nrow(y_test)))
+trading_rule$asset_value[1] = starting_funds; trading_rule$shares_held[1] = shares
+trading_rule$cash_held[1] = cash_on_hand; trading_rule$daily_profit_loss[1] = 0
+trading_rule$actual_price = actual_unscaled; trading_rule$predicted_price = predictions_unscaled
+threshold_buy = 0.01; threshold_sell = -0.01
+loss_minimisation_threshold = -0.05; last_buy_price = 0
 for(i in 1:nrow(trading_rule)){
   current_price = trading_rule$actual_price[i]
   predicted_price = trading_rule$predicted_price[i]
   action = "HOLD"
-
   if(!is.na(predicted_price) && !is.na(current_price)){
     predicted_change_percentage = (predicted_price - current_price) / current_price
     if(predicted_change_percentage > threshold_buy && cash_on_hand > current_price){
       action = "BUY"
-    } else if(predicted_change_percentage < threshold_sell && cash_on_hand < current_price && shares > 0){
-      action = "SELL"
-    }
-  }
+    } else if(predicted_change_percentage < threshold_sell && cash_on_hand < current_price && shares > 0){action = "SELL"}}
   trading_rule$action[i] = action
-
   previous_asset_value = trading_rule$asset_value[i]
   if(i > 1){
     cash_on_hand = trading_rule$cash_held[i-1]
     shares = trading_rule$shares_held[i-1]
-    previous_asset_value = trading_rule$asset_value[i-1]
-  }
-
+    previous_asset_value = trading_rule$asset_value[i-1]}
   if(trading_rule$action[i] == "BUY" && cash_on_hand > 0){
     buy_quantity = floor(cash_on_hand / current_price)
     if(buy_quantity > 0){
       shares = shares + buy_quantity
       cash_on_hand = cash_on_hand - (buy_quantity * current_price)
-      last_buy_price = current_price
-    }
+      last_buy_price = current_price}
   } else if(trading_rule$action[i] == "SELL" && shares > 0){
     sell_value = shares * current_price
     if (last_buy_price > 0 && (current_price - last_buy_price) / last_buy_price < loss_minimisation_threshold) {
@@ -580,36 +562,36 @@ for(i in 1:nrow(trading_rule)){
     } else {
       cash_on_hand = cash_on_hand + sell_value
       shares = 0
-      last_buy_price = 0
-    }
-  }
-
+      last_buy_price = 0}}
   trading_rule$asset_value[i] = cash_on_hand + (shares * current_price)
   trading_rule$shares_held[i] = shares
   trading_rule$cash_held[i] = cash_on_hand
-
   # Calculate daily profit/loss
   if (i > 1) {
-    trading_rule$daily_profit_loss[i] = trading_rule$asset_value[i] - previous_asset_value
-  }
-
+    trading_rule$daily_profit_loss[i] = trading_rule$asset_value[i] - previous_asset_value}
   # Sell all on the final day
   if (i == nrow(trading_rule) && trading_rule$shares_held[i] > 0) {
     final_sell_value = trading_rule$shares_held[i] * current_price
     trading_rule$asset_value[i] = trading_rule$cash_held[i] + final_sell_value
     trading_rule$cash_held[i] = trading_rule$cash_held[i] + final_sell_value
     trading_rule$shares_held[i] = 0
-    trading_rule$action[i] = "SELL"
-  }
-}
-
+    trading_rule$action[i] = "SELL"}}
 final_asset_value = tail(trading_rule$asset_value, 1)
 initial_investment = starting_funds
 profit_loss = final_asset_value - initial_investment
 roi = (profit_loss / initial_investment) * 100
-cat("\nFinal Asset Value: $", round(final_asset_value, 2), "\n")
-cat("Profit/Loss: $", round(profit_loss, 2), "\n")
-cat("Return on Investment (ROI): ", round(roi, 2), "%\n")
+```
+
+```{R echo=FALSE}
+data <- data.frame(
+  Final_Asset_Value = round(final_asset_value, 2),
+  Profit_Loss = round(profit_loss, 2),
+  ROI_Percentage = paste0(round(roi, 2), "%")
+)
+print(data)
+```
+
+```{R include=FALSE}
 print(trading_rule)
 ```
 
@@ -619,68 +601,45 @@ The Dual-Indicator strategy is similar to the Prediction-Based strategy, but utl
 
 ```{r}
 #Revised Dual-Indicator Trading Strategy
-threshold_buy <- 0.03
-threshold_sell <- -0.2
-oversold_threshold <- 70
-overbought_threshold <- 30
-loss_minimisation_threshold <- -0.05
-last_buy_price <- 0
+threshold_buy <- 0.03; threshold_sell <- -0.2
+oversold_threshold <- 70; overbought_threshold <- 30
+loss_minimisation_threshold <- -0.05; last_buy_price <- 0
 # Reinitialize simulation variables
-investment_dual <- 10000
-cash_on_hand <- investment_dual
-shares_dual <- 0
-
+investment_dual <- 10000; cash_on_hand <- investment_dual; shares_dual <- 0
 # Build the trading log for the dual-indicator strategy
 trading_rule_dual <- data.frame(
-  Date = index(tail(best_asset_data, nrow(y_test))),
-  actual_price = rep(NA, nrow(y_test)),
-  predicted_price = rep(NA, nrow(y_test)),
-  RSI = as.numeric(tail(best_asset_data$RSI, nrow(y_test))),
-  action = character(nrow(y_test)),
-  asset_value = numeric(nrow(y_test)),
-  shares_held = numeric(nrow(y_test)),
-  cash_held = numeric(nrow(y_test)),
-  daily_profit_loss = numeric(nrow(y_test))
-)
-
-trading_rule_dual$asset_value[1] <- investment_dual
-trading_rule_dual$shares_held[1] <- shares_dual
-trading_rule_dual$cash_held[1] <- cash_on_hand
-trading_rule_dual$daily_profit_loss[1] <- 0
-trading_rule_dual$actual_price <- actual_unscaled
-trading_rule_dual$predicted_price <- predictions_unscaled
-
+  Date = index(tail(best_asset_data, nrow(y_test))), actual_price = rep(NA, nrow(y_test)),
+  predicted_price = rep(NA, nrow(y_test)), RSI = as.numeric(tail(best_asset_data$RSI, nrow(y_test))),
+  action = character(nrow(y_test)), asset_value = numeric(nrow(y_test)),
+  shares_held = numeric(nrow(y_test)), cash_held = numeric(nrow(y_test)),
+  daily_profit_loss = numeric(nrow(y_test)))
+trading_rule_dual$asset_value[1] <- investment_dual; trading_rule_dual$shares_held[1] <- shares_dual
+trading_rule_dual$cash_held[1] <- cash_on_hand; trading_rule_dual$daily_profit_loss[1] <- 0
+trading_rule_dual$actual_price <- actual_unscaled; trading_rule_dual$predicted_price <- predictions_unscaled
 # Simulation loop with debug prints for the first few iterations
 for(i in 1:nrow(trading_rule_dual)){
   current_price = trading_rule_dual$actual_price[i]
   predicted_price = trading_rule_dual$predicted_price[i]
   current_rsi = trading_rule_dual$RSI[i]
   action = "HOLD"
-
   if(!is.na(predicted_price) && !is.na(current_price) && !is.na(current_rsi)){
     predicted_change_percentage = (predicted_price - current_price) / current_price
     if(predicted_change_percentage > threshold_buy && current_rsi < oversold_threshold && cash_on_hand > current_price){
       action = "BUY"
     } else if(predicted_change_percentage < threshold_sell && current_rsi > overbought_threshold && shares_dual > 0){
-      action = "SELL"
-    }
-  }
+      action = "SELL"}}
   trading_rule_dual$action[i] = action
-
   previous_asset_value = trading_rule_dual$asset_value[i]
   if(i > 1){
     cash_on_hand = trading_rule_dual$cash_held[i-1]
     shares_dual = trading_rule_dual$shares_held[i-1]
-    previous_asset_value = trading_rule_dual$asset_value[i-1]
-  }
-
+    previous_asset_value = trading_rule_dual$asset_value[i-1]}
   if(trading_rule_dual$action[i] == "BUY" && cash_on_hand > 0){
     buy_quantity = floor(cash_on_hand / current_price)
     if(buy_quantity > 0){
       shares_dual = shares_dual + buy_quantity
       cash_on_hand = cash_on_hand - (buy_quantity * current_price)
-      last_buy_price = current_price
-    }
+      last_buy_price = current_price}
   } else if(trading_rule_dual$action[i] == "SELL" && shares_dual > 0){
     sell_value = shares_dual * current_price
     if (last_buy_price > 0 && (current_price - last_buy_price) / last_buy_price < loss_minimisation_threshold) {
@@ -691,36 +650,36 @@ for(i in 1:nrow(trading_rule_dual)){
     } else {
       cash_on_hand = cash_on_hand + sell_value
       shares_dual = 0
-      last_buy_price = 0
-    }
-  }
-
+      last_buy_price = 0}}
   trading_rule_dual$asset_value[i] = cash_on_hand + (shares_dual * current_price)
   trading_rule_dual$shares_held[i] = shares_dual
   trading_rule_dual$cash_held[i] = cash_on_hand
-
   # Calculate daily profit/loss
   if (i > 1) {
-    trading_rule_dual$daily_profit_loss[i] = trading_rule_dual$asset_value[i] - previous_asset_value
-  }
-
+    trading_rule_dual$daily_profit_loss[i] = trading_rule_dual$asset_value[i] - previous_asset_value}
   # Sell all on the final day
   if (i == nrow(trading_rule_dual) && trading_rule_dual$shares_held[i] > 0) {
     final_sell_value = trading_rule_dual$shares_held[i] * current_price
     trading_rule_dual$asset_value[i] = trading_rule_dual$cash_held[i] + final_sell_value
     trading_rule_dual$cash_held[i] = trading_rule_dual$cash_held[i] + final_sell_value
     trading_rule_dual$shares_held[i] = 0
-    trading_rule_dual$action[i] = "SELL"
-  }
-}
-
+    trading_rule_dual$action[i] = "SELL"}}
 final_asset_value = tail(trading_rule_dual$asset_value, 1)
 initial_investment = investment_dual
 profit_loss = final_asset_value - initial_investment
 roi = (profit_loss / initial_investment) * 100
-cat("\nFinal Asset Value: $", round(final_asset_value, 2), "\n")
-cat("Profit/Loss: $", round(profit_loss, 2), "\n")
-cat("Return on Investment (ROI): ", round(roi, 2), "%\n")
+```
+
+```{R echo=FALSE}
+data <- data.frame(
+  Final_Asset_Value = round(final_asset_value, 2),
+  Profit_Loss = round(profit_loss, 2),
+  ROI_Percentage = paste0(round(roi, 2), "%")
+)
+print(data)
+```
+
+```{R include=FALSE}
 print(trading_rule_dual)
 ```
 
@@ -728,7 +687,7 @@ print(trading_rule_dual)
 
 The profit is calculated based on the final asset value subtracted by the initial investment in trading. Daily profits and losses are tracked based on the changes in the asset value each day. In the end, the trading strategy performance (based on the value of the asset) and daily profit/loss are plotted to get a visual representation of the strategy. These are then compared for both strategies to gain a visual understanding of their performance. It can be observed that the Dual-Indicator trading strategy outperforms the Prediction-Based strategy. This can be attributed to RSI acting as another filter to add momentum to the trades and filter out less reliable prediction-based signals.
 
-```{r}
+```{r echo=FALSE, fig.width=12, fig.height=4}
 par(mfrow = c(1, 2))
 plot(trading_rule$Date, trading_rule$asset_value, type = "l", col = "blue",
      xlab = "Date", ylab = "Asset Value ($)",
@@ -736,7 +695,6 @@ plot(trading_rule$Date, trading_rule$asset_value, type = "l", col = "blue",
 lines(trading_rule_dual$Date, trading_rule_dual$asset_value, type = "l", col = "red")
 legend("topleft", legend = c("Prediction-Based", "Dual-Indicator"), col = c("blue", "red"), lty = 1)
 grid()
-
 plot(trading_rule$Date, trading_rule$daily_profit_loss, type = "l", col = "blue",
      xlab = "Date", ylab = "Daily Profit/Loss ($)",
      main = "Daily Profit/Loss Comparison", ylim = range(c(trading_rule$daily_profit_loss, trading_rule_dual$daily_profit_loss)))
