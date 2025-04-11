@@ -341,7 +341,7 @@ mean((predictions1_GA - drop(y_train))^2, na.rm = TRUE)
 
 ## TensorFlow LSTM
 
-After observing suboptimal performance with our initial approach, we decided to utilise the TensorFlow framework to build and train a deeper LSTM network. The R interface to TensorFlow provides a higher-level API and greater flexibility in model design, allowing us to stack multiple LSTM layers and customise hyperparameters such as the hidden units and sequence length. Additionally, this setup supports advanced optimisations and GPU acceleration, which can significantly improve training speed and predictive performance. As a result, the deeper LSTM architecture built with TensorFlow was able to capture more complex temporal dynamics in the data and deliver substantially more accurate predictions.
+After observing suboptimal performance with our initial approach, we decided to utilise the TensorFlow framework to build and train a deeper LSTM network. The R interface to TensorFlow provides a higher-level API and greater flexibility in model design, allowing us to stack multiple LSTM layers and customise hyperparameters such as the hidden units and learning rate. Additionally, this setup supports advanced optimisations and GPU acceleration, which can significantly improve training speed and predictive performance. As a result, the deeper LSTM architecture built with TensorFlow was able to capture more complex temporal dynamics in the data and deliver significantly more accurate predictions.
 
 ```{R include = FALSE}
 startDate <- "2024-01-01"; endDate <- "2024-12-31"
@@ -462,43 +462,30 @@ run_tensorflow_grid_search <- function(lr_vals, hd_vals, ne_vals, bs_vals){
 #print(best_params)
 ```
 
-Here, we define a deeper LSTM architecture using TensorFlow. The network consists of three LSTM layers stacked on top of each other, each with 128 units, followed by a dense layer that outputs a single value. Stacking multiple LSTM layers helps the model capture more complex temporal patterns in our time series data. We compile the model with the Adam optimiser and use MSE as the primary loss function. Finally, we train the model for 200 epochs while feeding samples in batches of size 32 at each iteration. 
+Below, we define a deeper LSTM architecture using TensorFlow. The network consists of three LSTM layers stacked on top of each other, this is then followed by a dense layer that outputs a single value. Stacking multiple LSTM layers helps the model capture more complex temporal patterns in our time series data. We compile the model with the Adam optimiser and use MSE as the primary loss function. Finally, we train the model for 200 epochs while feeding samples in batches of size 32 at each iteration. Given the success of grid search on the previous LSTM, this method has been employed again to optimise the following parameters: learning rate, hidden dimensions, number of epochs and batch size.
 
 ```{R echo=TRUE, message=FALSE, warning=FALSE}
-lr <- 0.001; hd <- 64; ne <- 200; bs <- 8
+#lr <- best_params$learningrate; hd <- best_params$hidden_dim
+#ne <- best_params$numepochs; bs <- best_params$batch_size
 train_model <- function(lr, hd, ne, bs){
   model <- keras_model_sequential() %>%
-    layer_lstm(units = 128, input_shape = c(7, 6), return_sequences = TRUE) %>%
-    layer_lstm(units = 128, return_sequences = TRUE) %>%  
-    layer_lstm(units = 128) %>%  
-    layer_dense(units = 1, activation = "tanh")  
-
-  # Compile the model
-  model %>% compile(
-    optimizer = "adam",
-    loss = "mse",
-    metrics = c("mse")
-  )
-
-  # Train the model
-  model %>% fit(
-    x_train, y_train,
-    epochs = 200, batch_size = 32,
-    verbose = 0
-  )
-
-  return (model)
-}
-
+  layer_lstm(units = hd, input_shape = c(7, 6), return_sequences = TRUE) %>%
+  layer_lstm(units = hd, return_sequences = TRUE) %>%  
+  layer_lstm(units = hd) %>%  
+  layer_dense(units = 1, activation = "tanh")  
+  model %>% compile( optimizer = optimizer_adam(learning_rate = lr),
+    loss = "mse", metrics = c("mse"))
+  history <- model %>% fit( x_train, y_train, epochs = ne, batch_size = bs,
+    validation_split = 0.2, verbose = 0); return(model)}
 #model <- train_model(lr, hd, ne, bs)
 #save_model_hdf5(model, "tensorflow_lstm.keras")
 model <- load_model_hdf5("tensorflow_lstm.keras")
 ```
 
-```{R fig.width=12, fig.height=4, echo=FALSE}
+```{R fig.width=12, fig.height=4, echo=FALSE, message=FALSE}
 predictions1 <- model %>% predict(x_train)
 predictions2 <- model %>% predict(x_test)
-draw_two_graph(predictions1, y_train, predictions2, y_test, "train", "test", "Temp Message")
+draw_two_graph(predictions1, y_train, predictions2, y_test, "Train Data", "Test Data", "TensorFlow LSTM Optimised Parameters")
 ```
 
 # Trading
