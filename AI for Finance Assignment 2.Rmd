@@ -339,7 +339,9 @@ mean((predictions1_GS - drop(y_train))^2, na.rm = TRUE)
 mean((predictions1_GA - drop(y_train))^2, na.rm = TRUE)
 ```
 
-## Tensorflow LSTM
+## TensorFlow LSTM
+
+After observing suboptimal performance with our initial approach, we decided to utilise the TensorFlow framework to build and train a deeper LSTM network. The R interface to TensorFlow provides a higher-level API and greater flexibility in model design, allowing us to stack multiple LSTM layers and customise hyperparameters such as the hidden units and sequence length. Additionally, this setup supports advanced optimisations and GPU acceleration, which can significantly improve training speed and predictive performance. As a result, the deeper LSTM architecture built with TensorFlow was able to capture more complex temporal dynamics in the data and deliver substantially more accurate predictions.
 
 ```{R include = FALSE}
 startDate <- "2024-01-01"; endDate <- "2024-12-31"
@@ -459,6 +461,8 @@ run_tensorflow_grid_search <- function(lr_vals, hd_vals, ne_vals, bs_vals){
 #cat("Best Hyperparameters:\n")
 #print(best_params)
 ```
+
+Here, we define a deeper LSTM architecture using TensorFlow. The network consists of three LSTM layers stacked on top of each other, each with 128 units, followed by a dense layer that outputs a single value. Stacking multiple LSTM layers helps the model capture more complex temporal patterns in our time series data. We compile the model with the Adam optimiser and use MSE as the primary loss function. Finally, we train the model for 200 epochs while feeding samples in batches of size 32 at each iteration. 
 
 ```{R echo=TRUE, message=FALSE, warning=FALSE}
 lr <- 0.001; hd <- 64; ne <- 200; bs <- 8
